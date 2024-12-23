@@ -16,11 +16,12 @@ HIPAAGuard provides encrypted, HIPAA-compliant React components that make buildi
 - 📚 Comprehensive TypeScript support
 
 ### 🚀 Quick Start
-
+```
 bash
 npm install hipaa-guard
+```
 
-
+```
 tsx
 import { SecureForm, SecureField } from 'hipaa-guard';
 
@@ -35,7 +36,7 @@ function PatientForm() {
     </SecureForm>
   );
 }
-
+```
 
 ## 🎯 Perfect For
 
