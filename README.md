@@ -46,12 +46,12 @@ function PatientForm() {
 - Any HIPAA-Regulated Project
 
 ## 🛠 Installation
-
+```
 bash
 npm install hipaa-guard
 # or
 yarn add hipaa-guard
-
+```
 
 ## 📚 Documentation
 
