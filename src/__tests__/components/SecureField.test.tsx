@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
+import { act } from 'react';
 import { SecureField } from '../../components/SecureField';
 
 describe('SecureField', () => {
@@ -43,7 +43,7 @@ describe('SecureField', () => {
         />
       );
     });
-    
+
     const input = screen.getByLabelText('Test Input');
     await act(async () => {
       fireEvent.change(input, { target: { value: 'test value' } });
@@ -67,7 +67,7 @@ describe('SecureField', () => {
         />
       );
     });
-    
+
     const input = screen.getByLabelText('Test Input');
     await act(async () => {
       fireEvent.change(input, { target: { value: 'ab' } });

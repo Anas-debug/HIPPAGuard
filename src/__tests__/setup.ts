@@ -21,12 +21,6 @@ const mockCrypto = {
   }
 } as unknown as Crypto;
 
-// Add crypto to window
 Object.defineProperty(window, 'crypto', {
   value: mockCrypto
 });
-
-// Mock window if needed
-if (typeof window === 'undefined') {
-  (global as any).window = {};
-}
