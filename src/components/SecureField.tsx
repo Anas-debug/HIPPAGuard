@@ -1,5 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { SecurityCore } from '../core/security-core';
+import React, { useState, useCallback } from 'react';
 
 interface SecureFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   name: string;
@@ -14,8 +13,8 @@ export const SecureField: React.FC<SecureFieldProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  initialEncryptedValue,
-  onEncryptedChange,
+  // initialEncryptedValue,
+  // onEncryptedChange,
   validateFn,
   type = 'text',
   className = '',
@@ -24,31 +23,31 @@ export const SecureField: React.FC<SecureFieldProps> = ({
   // State for field value and validation
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
 
   // Initialize security core
-  const securityCore = new SecurityCore();
+  // const securityCore = new SecurityCore();
 
   // Handle initial encrypted value
-  useEffect(() => {
-    const decryptInitialValue = async () => {
-      if (initialEncryptedValue) {
-        try {
-          await securityCore.initialize('temp-key'); // In real app, get from context
-          const decrypted = await securityCore.decrypt(initialEncryptedValue);
-          setValue(typeof decrypted === 'string' ? decrypted : '');
-        } catch (err) {
-          setError('Failed to decrypt initial value');
-        }
-      }
-      setIsLoading(false);
-    };
+  // useEffect(() => {
+  //   const decryptInitialValue = async () => {
+  //     if (initialEncryptedValue) {
+  //       try {
+  //         await securityCore.initialize('temp-key'); // In real app, get from context
+  //         const decrypted = await securityCore.decrypt(initialEncryptedValue);
+  //         setValue(typeof decrypted === 'string' ? decrypted : '');
+  //       } catch (err) {
+  //         setError('Failed to decrypt initial value');
+  //       }
+  //     }
+  //     setIsLoading(false);
+  //   };
 
-    decryptInitialValue();
-  }, [initialEncryptedValue]);
+  //   decryptInitialValue();
+  // }, [initialEncryptedValue]);
 
   // Handle value changes
-  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
 
@@ -59,24 +58,24 @@ export const SecureField: React.FC<SecureFieldProps> = ({
       if (validationError) return;
     }
 
-    try {
-      // Encrypt the new value
-      await securityCore.initialize('temp-key'); // In real app, get from context
-      const encryptedValue = await securityCore.encrypt(newValue);
-      onEncryptedChange?.(name, encryptedValue);
-    } catch (err) {
-      setError('Failed to encrypt value');
-    }
-  }, [name, onEncryptedChange, validateFn, securityCore]);
+    // try {
+    //   // Encrypt the new value
+    //   await securityCore.initialize('temp-key'); // In real app, get from context
+    //   const encryptedValue = await securityCore.encrypt(newValue);
+    //   onEncryptedChange?.(name, encryptedValue);
+    // } catch (err) {
+    //   setError('Failed to encrypt value');
+    // }
+  }, [name, validateFn]);
 
   // Render loading state
-  if (isLoading) {
-    return <div className="animate-pulse h-10 bg-gray-100 rounded" />;
-  }
+  // if (isLoading) {
+  //   return <div className="animate-pulse h-10 bg-gray-100 rounded" />;
+  // }
 
   return (
     <div className="space-y-2">
-      <label 
+      <label
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -89,13 +88,13 @@ export const SecureField: React.FC<SecureFieldProps> = ({
           </span>
         )}
       </label>
-      
+
       <input
         id={name}
         type={type}
         value={value}
         onChange={handleChange}
-        className={`block w-full rounded-md border-gray-300 shadow-sm 
+        className={`block w-full rounded-md border-gray-300 shadow-sm
           focus:border-blue-500 focus:ring-blue-500 sm:text-sm
           ${error ? 'border-red-300' : 'border-gray-300'}
           ${className}`}

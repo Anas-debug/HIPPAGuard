@@ -1,5 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { SecurityCore } from '../core/security-core';
+import React, { useState, useCallback } from 'react';
 
 interface SecureTextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   name: string;
@@ -14,57 +13,30 @@ export const SecureTextArea: React.FC<SecureTextAreaProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  initialEncryptedValue,
-  onEncryptedChange,
+  // initialEncryptedValue,
+  // onEncryptedChange,
   validateFn,
   className = '',
   ...props
 }) => {
+  // State for textarea value and validation
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const securityCore = new SecurityCore();
-
-  useEffect(() => {
-    const decryptInitialValue = async () => {
-      if (initialEncryptedValue) {
-        try {
-          await securityCore.initialize('temp-key');
-          const decrypted = await securityCore.decrypt(initialEncryptedValue);
-          setValue(typeof decrypted === 'string' ? decrypted : '');
-        } catch (err) {
-          setError('Failed to decrypt initial value');
-        }
-      }
-      setIsLoading(false);
-    };
-
-    decryptInitialValue();
-  }, [initialEncryptedValue]);
-
-  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
 
+    // Validate if validation function provided
     if (validateFn) {
       const validationError = validateFn(newValue);
       setError(validationError);
       if (validationError) return;
     }
 
-    try {
-      await securityCore.initialize('temp-key');
-      const encryptedValue = await securityCore.encrypt(newValue);
-      onEncryptedChange?.(name, encryptedValue);
-    } catch (err) {
-      setError('Failed to encrypt value');
-    }
-  }, [name, onEncryptedChange, validateFn]);
-
-  if (isLoading) {
-    return <div className="animate-pulse h-20 bg-gray-100 rounded" />;
-  }
+    // Encryption and decryption logic would go here
+  }, [name, validateFn]);
 
   return (
     <div className="space-y-2">
