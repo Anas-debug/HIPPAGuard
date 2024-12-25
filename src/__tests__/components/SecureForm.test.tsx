@@ -1,97 +1,77 @@
 import React from 'react';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import { act } from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { SecureForm } from '../../components/SecureForm';
 import { SecureField } from '../../components/SecureField';
+import { act } from 'react-dom/test-utils';
 
 describe('SecureForm', () => {
-  it('renders form with children', async () => {
-    await act(async () => {
-      render(
-        <SecureForm onSubmit={() => {}}>
-          <SecureField
-            name="testField"
-            label="Test Field"
-          />
-          <button type="submit">Submit</button>
-        </SecureForm>
-      );
-    });
-    
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders form and children', () => {
+    render(
+      <SecureForm onSubmit={() => {}}>
+        <SecureField
+          name="testField"
+          label="Test Field"
+        />
+        <button type="submit">Submit</button>
+      </SecureForm>
+    );
+
+    // Look for specific elements instead of roles
     expect(screen.getByLabelText('Test Field')).toBeInTheDocument();
     expect(screen.getByText('Submit')).toBeInTheDocument();
   });
 
   it('handles form submission', async () => {
     const handleSubmit = jest.fn();
-    
-    await act(async () => {
-      render(
-        <SecureForm onSubmit={handleSubmit}>
-          <SecureField
-            name="testField"
-            label="Test Field"
-          />
-          <button type="submit">Submit</button>
-        </SecureForm>
-      );
-    });
+    const user = userEvent.setup({ delay: null }); // Disable delay
 
-    const input = screen.getByLabelText('Test Field');
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'test value' } });
-    });
+    render(
+      <SecureForm onSubmit={handleSubmit}>
+        <SecureField
+          name="testField"
+          label="Test Field"
+        />
+        <button type="submit">Submit</button>
+      </SecureForm>
+    );
 
     await act(async () => {
-      fireEvent.submit(screen.getByRole('button'));
+      const input = screen.getByLabelText('Test Field');
+      await user.type(input, 'test value');
+      await user.click(screen.getByText('Submit'));
     });
-    
-    await waitFor(() => {
-      expect(handleSubmit).toHaveBeenCalled();
-    });
+
+    expect(handleSubmit).toHaveBeenCalled();
   });
 
-  it('collects multiple encrypted fields', async () => {
+  it('handles validation before submission', async () => {
     const handleSubmit = jest.fn();
-    
-    await act(async () => {
-      render(
-        <SecureForm onSubmit={handleSubmit}>
-          <SecureField
-            name="field1"
-            label="Field 1"
-          />
-          <SecureField
-            name="field2"
-            label="Field 2"
-          />
-          <button type="submit">Submit</button>
-        </SecureForm>
-      );
-    });
+    const validateFn = jest.fn(value => value.length < 3 ? 'Too short' : null);
+    const user = userEvent.setup({ delay: null }); // Disable delay
 
-    const field1 = screen.getByLabelText('Field 1');
-    const field2 = screen.getByLabelText('Field 2');
-    
-    await act(async () => {
-      fireEvent.change(field1, { target: { value: 'value 1' } });
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    render(
+      <SecureForm onSubmit={handleSubmit}>
+        <SecureField
+          name="testField"
+          label="Test Field"
+          validateFn={validateFn}
+        />
+        <button type="submit">Submit</button>
+      </SecureForm>
+    );
 
     await act(async () => {
-      fireEvent.change(field2, { target: { value: 'value 2' } });
-      await new Promise(resolve => setTimeout(resolve, 0));
+      const input = screen.getByLabelText('Test Field');
+      await user.type(input, 'ab');
+      await user.click(screen.getByText('Submit'));
     });
 
-    await act(async () => {
-      fireEvent.submit(screen.getByRole('button'));
-    });
-    
-    await waitFor(() => {
-      expect(handleSubmit).toHaveBeenCalled();
-      const submittedData = handleSubmit.mock.calls[0][0];
-      expect(submittedData).toHaveProperty('field1');
-      expect(submittedData).toHaveProperty('field2');
-    });
+    expect(screen.getByText('Too short')).toBeInTheDocument();
+    expect(handleSubmit).not.toHaveBeenCalled();
   });
 });

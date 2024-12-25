@@ -1,50 +1,62 @@
 {
-  "name": "hippaguard",
+  "name": "@hippaguard/react",
   "version": "0.1.0",
-  "description": "HIPAA-compliant React components for healthcare applications",
+  "description": "Secure form handling with client-side encryption for React applications",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "rollup -c",
-    "test": "jest --passWithNoTests",
+    "test": "jest --runInBand --no-cache --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "prepublishOnly": "npm run build",
     "lint": "eslint src --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "hipaa",
-    "healthcare",
-    "security",
     "react",
-    "typescript"
+    "forms",
+    "security",
+    "encryption",
+    "hipaa",
+    "phi",
+    "pii",
+    "secure-forms",
+    "client-side-encryption"
   ],
-  "author": "",
+  "author": "Your Name",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/hippaguard"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/hippaguard/issues"
+  },
+  "homepage": "https://github.com/yourusername/hippaguard#readme",
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0"
   },
-  "dependencies": {
-    "crypto-js": "^4.1.1",
-    "tslib": "^2.4.0"
-  },
   "devDependencies": {
-    "@babel/preset-env": "^7.24.0",
-    "@babel/preset-react": "^7.23.3",
-    "@babel/preset-typescript": "^7.23.3",
-    "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/react": "^14.1.2",
-    "@types/jest": "^29.5.11",
-    "@types/node": "^22.10.2",
-    "@types/react": "^18.0.14",
-    "@types/react-dom": "^18.0.5",
-    "@types/testing-library__jest-dom": "^5.14.9",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
+    "@testing-library/jest-dom": "^6.1.2",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "@types/jest": "^29.5.4",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "jest": "^29.6.4",
+    "jest-environment-jsdom": "^29.6.4",
+    "rollup": "^2.79.1",
+    "rollup-plugin-typescript2": "^0.35.0",
     "ts-jest": "^29.1.1",
-    "typescript": "^4.7.4",
-    "util": "^0.12.5"
+    "typescript": "^5.2.2"
   }
 }
