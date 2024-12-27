@@ -2,11 +2,13 @@
 
 Secure form handling with client-side encryption for React applications - HIPAA-compliant form components with built-in security.
 
+<p align="center">
+  <img src="assets/logo.svg" width="64" height="64" alt="HIPPAGuard Logo" />
+</p>
+
 [![npm version](https://badge.fury.io/js/@hippaguard%2Freact.svg)](https://badge.fury.io/js/@hippaguard%2Freact)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Test Coverage](https://img.shields.io/badge/coverage-87%25-green.svg)](https://github.com/Anas-debug/HIPPAGuard)
-
-![HIPPAGuard Logo](assets/logo.svg)
 
 ## Overview
 
@@ -15,8 +17,8 @@ HIPPAGuard provides secure form components for handling sensitive healthcare dat
 ## Key Features
 
 - 🔒 Client-side AES-256-GCM encryption
-- ⚕ HIPAA & PHI/PII data protection 
-- 🛡 Form validation & sanitization
+- ⚕️ HIPAA & PHI/PII data protection 
+- 🛡️ Form validation & sanitization
 - 🔄 Simple React hooks API
 - 📝 Full TypeScript support
 - ✅ Extensive test coverage
@@ -27,13 +29,13 @@ HIPPAGuard provides secure form components for handling sensitive healthcare dat
 
 ### Installation
 
-bash
+```sh
 npm install @hippaguard/react
-
+```
 
 ### Basic Usage
 
-tsx
+```tsx
 import { SecureForm, SecureField } from '@hippaguard/react';
 
 function PatientForm() {
@@ -70,14 +72,14 @@ function PatientForm() {
     </SecureForm>
   );
 }
-
+```
 
 ## Core Components
 
 ### SecureField
 Standard input field with encryption and validation.
 
-tsx
+```tsx
 <SecureField
   name="ssn"
   label="Social Security Number" 
@@ -86,12 +88,12 @@ tsx
   validateFn={validateSSN}
   required
 />
-
+```
 
 ### SecureSelect 
 Encrypted select/dropdown component.
 
-tsx
+```tsx
 <SecureSelect
   name="provider"
   label="Insurance Provider"
@@ -101,57 +103,48 @@ tsx
   ]}
   sensitivityLevel="PHI"
 />
-
+```
 
 ### SecureTextArea
 Multiline text input with encryption.
 
-tsx
+```tsx
 <SecureTextArea
   name="notes"
   label="Medical Notes"
   rows={4}
   sensitivityLevel="PHI" 
 />
-
+```
 
 ### SecureCheckbox
 Secure checkbox component.
 
-tsx
+```tsx
 <SecureCheckbox
   name="consent"
   label="I consent to treatment"
   sensitivityLevel="PHI"
 />
-
+```
 
 ### SecureRadioGroup
 Radio button group with encryption.
 
-tsx
+```tsx
 <SecureRadioGroup
   name="gender"
   label="Gender"
   options={['Male', 'Female', 'Other']}
   sensitivityLevel="PHI"
 />
-
-
-## Security Features
-
-- 🔐 AES-256-GCM encryption
-- 🔑 Unique IV per encryption
-- 🛡 PBKDF2 key derivation
-- 🧹 Auto key cleanup
-- 🔒 Zero plaintext storage
-- ✅ Input sanitization 
+```
 
 ## Validation
 
 Built-in validation helpers:
 
-tsx
+```tsx
 import { validators } from '@hippaguard/react';
 
 <SecureField
@@ -161,14 +154,14 @@ import { validators } from '@hippaguard/react';
     validators.email()
   ])}
 />
-
+```
 
 ## Context & Hooks
 
 ### SecurityProvider
 Provides encryption context.
 
-tsx
+```tsx
 import { SecurityProvider } from '@hippaguard/react';
 
 function App() {
@@ -178,14 +171,23 @@ function App() {
     </SecurityProvider>
   );
 }
-
+```
 
 ### useSecurity
 Access encryption functions.
 
-tsx
+```tsx
 const { encrypt, decrypt } = useSecurity();
+```
 
+## Security Features
+
+- 🔐 AES-256-GCM encryption
+- 🔑 Unique IV per encryption
+- 🛡️ PBKDF2 key derivation
+- 🧹 Auto key cleanup
+- 🔒 Zero plaintext storage
+- ✅ Input sanitization 
 
 ## Contributing
 
@@ -194,33 +196,34 @@ We welcome contributions! Please check our [Contributing Guide](CONTRIBUTING.md)
 ### Development
 
 1. Clone repo
-bash
+```sh
 git clone https://github.com/Anas-debug/HIPPAGuard.git
-
+```
 
 2. Install dependencies
-bash
+```sh
 npm install
-
+```
 
 3. Run tests
-bash
+```sh
 npm test
-
+```
 
 ### Testing
-Coverage: ~87%
 - Unit tests
 - Integration tests  
 - Security tests
 - Edge cases
+- Current coverage: ~87%
 
 ## Support
 
 - 📝 [Documentation](https://github.com/Anas-debug/HIPPAGuard)
 - 🐛 [Issues](https://github.com/Anas-debug/HIPPAGuard/issues)
-- ✉ [Email](mailto:security@hippaguard.dev)
+- ✉️ [Email](mailto:security@hippaguard.dev)
 
 ## License
 
 [MIT](LICENSE) © [Anas Saoui](https://github.com/Anas-debug)
+EOL
