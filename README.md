@@ -59,13 +59,6 @@ function PatientForm() {
         sensitivityLevel="PHI"
       />
 
-      <SecureSelect
-        name="insurance"
-        label="Insurance Provider"
-        options={insuranceOptions}
-        sensitivityLevel="PHI"
-      />
-
       <button type="submit">
         Submit
       </button>
@@ -87,21 +80,6 @@ Standard input field with encryption and validation.
   sensitivityLevel="PII"
   validateFn={validateSSN}
   required
-/>
-```
-
-### SecureSelect 
-Encrypted select/dropdown component.
-
-```tsx
-<SecureSelect
-  name="provider"
-  label="Insurance Provider"
-  options={[
-    { value: 'aetna', label: 'Aetna' },
-    { value: 'cigna', label: 'Cigna' }
-  ]}
-  sensitivityLevel="PHI"
 />
 ```
 
@@ -226,4 +204,3 @@ npm test
 ## License
 
 [MIT](LICENSE) © [Anas Saoui](https://github.com/Anas-debug)
-EOL
