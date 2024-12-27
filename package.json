@@ -58,5 +58,9 @@
     "rollup-plugin-typescript2": "^0.35.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.3",
+    "marked": "^15.0.4"
   }
 }

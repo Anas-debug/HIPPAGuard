@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef } from 'react';
-import SignaturePad from 'react-signature-canvas';
 
 interface SecureSignatureProps {
   name: string;
@@ -7,35 +6,99 @@ interface SecureSignatureProps {
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  width?: number;
+  height?: number;
 }
 
-export const SecureSignature: React.FC<SecureSignatureProps> = ({
+const SecureSignature: React.FC<SecureSignatureProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  ...props
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  width = 400,
+  height = 200,
 }) => {
-  // Ref for signature pad
-  const signaturePadRef = useRef<SignaturePad>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
 
-  // Handle signature changes
-  const handleChange = useCallback(() => {
-    const signatureData = signaturePadRef.current?.toData();
+  const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  // Handle clear signature
-  const handleClear = useCallback(() => {
-    signaturePadRef.current?.clear();
-    handleChange();
-  }, [handleChange]);
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  }, []);
+
+  const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }, [isDrawing]);
+
+  const stopDrawing = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.closePath();
+    setIsDrawing(false);
+
+    // Convert signature to base64
+    const signatureImage = canvas.toDataURL();
+    setSignatureData(signatureImage);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(signatureImage);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, signatureImage);
+  }, [name, onEncryptedChange, validateFn]);
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureData(null);
+  };
 
   return (
     <div className="space-y-2">
-      <label
+      <label 
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -49,22 +112,39 @@ export const SecureSignature: React.FC<SecureSignatureProps> = ({
         )}
       </label>
 
-      <div className="border border-gray-300 rounded-md p-4">
-        <SignaturePad
-          ref={signaturePadRef}
-          canvasProps={{ className: 'w-full h-40 border-2 border-dashed border-gray-300 rounded-md' }}
-          onEnd={handleChange}
-          {...props}
+      <div className="space-y-2">
+        <canvas
+          ref={canvasRef}
+          width={width}
+          height={height}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseOut={stopDrawing}
+          className={`border rounded-md ${
+            error ? 'border-red-300' : 'border-gray-300'
+          } ${className}`}
+          style={{ cursor: 'crosshair' }}
         />
+
+        <div className="flex space-x-2">
+          <button
+            type="button"
+            onClick={clearSignature}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear
+          </button>
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleClear}
-        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500 focus:outline-none focus:bg-blue-500"
-      >
-        Clear Signature
-      </button>
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureSignature;

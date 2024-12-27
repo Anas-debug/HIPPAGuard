@@ -9,12 +9,10 @@ interface SecureDatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInput
   validateFn?: (value: string) => string | null;
 }
 
-export const SecureDatePicker: React.FC<SecureDatePickerProps> = ({
+const SecureDatePicker: React.FC<SecureDatePickerProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
   validateFn,
   className = '',
   ...props
@@ -36,7 +34,7 @@ export const SecureDatePicker: React.FC<SecureDatePickerProps> = ({
     }
 
     // Encryption and decryption logic would go here
-  }, [name, validateFn]);
+  }, [validateFn]);
 
   return (
     <div className="space-y-2">
@@ -75,3 +73,5 @@ export const SecureDatePicker: React.FC<SecureDatePickerProps> = ({
     </div>
   );
 };
+
+export default SecureDatePicker;

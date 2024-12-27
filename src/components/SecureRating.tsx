@@ -1,38 +1,46 @@
 import React, { useState, useCallback } from 'react';
-import { Star } from 'lucide-react';
 
-interface SecureRatingProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface SecureRatingProps {
   name: string;
   label: string;
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
-  max?: number;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  maxRating?: number;
 }
 
-export const SecureRating: React.FC<SecureRatingProps> = ({
+const SecureRating: React.FC<SecureRatingProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  max = 5,
+  onEncryptedChange,
+  validateFn,
   className = '',
-  ...props
+  maxRating = 5,
 }) => {
-  // State for rating value
   const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle rating changes
-  const handleChange = useCallback((newRating: number) => {
-    setRating(newRating);
+  const handleRatingChange = useCallback((selectedRating: number) => {
+    setRating(selectedRating);
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(selectedRating.toString());
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, selectedRating.toString());
+  }, [name, onEncryptedChange, validateFn]);
 
   return (
     <div className="space-y-2">
-      <label
+      <label 
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -47,17 +55,42 @@ export const SecureRating: React.FC<SecureRatingProps> = ({
       </label>
 
       <div className="flex items-center">
-        {[...Array(max)].map((_, index) => (
-          <Star
-            key={index}
-            className={`h-6 w-6 cursor-pointer ${
-              index < rating ? 'text-yellow-400' : 'text-gray-300'
-            } ${className}`}
-            onClick={() => handleChange(index + 1)}
-            {...props}
-          />
-        ))}
+        {[...Array(maxRating)].map((_, index) => {
+          const ratingValue = index + 1;
+          return (
+            <button
+              key={index}
+              type="button"
+              className="focus:outline-none"
+              onClick={() => handleRatingChange(ratingValue)}
+              onMouseEnter={() => setHover(ratingValue)}
+              onMouseLeave={() => setHover(rating)}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill={ratingValue <= (hover || rating) ? '#ffc107' : 'none'}
+                stroke={ratingValue <= (hover || rating) ? '#ffc107' : '#e4e5e9'}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          );
+        })}
       </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureRating;

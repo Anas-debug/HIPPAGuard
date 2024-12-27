@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { RichTextEditor } from '@mantine/rte';
+import { marked } from 'marked'; // Corrected import
+import DOMPurify from 'dompurify';
 
 interface SecureMarkdownEditorProps {
   name: string;
@@ -7,54 +8,110 @@ interface SecureMarkdownEditorProps {
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  rows?: number;
 }
 
-export const SecureMarkdownEditor: React.FC<SecureMarkdownEditorProps> = ({
+const SecureMarkdownEditor: React.FC<SecureMarkdownEditorProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  ...props
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  rows = 6,
 }) => {
-  // State for editor content
-  const [content, setContent] = useState('');
+  const [markdown, setMarkdown] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle content changes
-  const handleChange = useCallback((value: string) => {
-    setContent(value);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newMarkdown = e.target.value;
+      setMarkdown(newMarkdown);
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+      // Validation
+      if (validateFn) {
+        const validationError = validateFn(newMarkdown);
+        setError(validationError);
+        if (validationError) return;
+      } else {
+        setError(null); // Clear error if validation passes
+      }
+
+      // Encrypt and send
+      onEncryptedChange?.(name, newMarkdown);
+    },
+    [name, onEncryptedChange, validateFn]
+  );
+
+  const sanitizedHTML = DOMPurify.sanitize(marked(markdown));
 
   return (
     <div className="space-y-2">
-      <label
-        htmlFor={name}
-        className="block text-sm font-medium text-gray-700"
-      >
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
         {label}
         {sensitivityLevel !== 'standard' && (
-          <span className={`ml-2 text-xs ${
-            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
-          }`}>
+          <span
+            className={`ml-2 text-xs ${
+              sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+            }`}
+          >
             ({sensitivityLevel})
           </span>
         )}
       </label>
 
-      <RichTextEditor
-        id={name}
-        value={content}
-        onChange={handleChange}
-        controls={[
-          ['bold', 'italic', 'underline', 'strike', 'clean'],
-          ['h1', 'h2', 'h3', 'h4'],
-          ['unorderedList', 'orderedList'],
-          ['link', 'blockquote', 'codeBlock'],
-        ]}
-        {...props}
-      />
+      <div className="flex items-center space-x-2 mb-2">
+        <button
+          type="button"
+          onClick={() => setPreviewMode(false)}
+          className={`px-2 py-1 rounded ${
+            !previewMode ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreviewMode(true)}
+          className={`px-2 py-1 rounded ${
+            previewMode ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+
+      {!previewMode ? (
+        <textarea
+          id={name}
+          name={name}
+          value={markdown}
+          onChange={handleChange}
+          rows={rows}
+          placeholder="Write markdown here..."
+          className={`block w-full rounded-md border-gray-300 shadow-sm
+            focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+            ${error ? 'border-red-300' : 'border-gray-300'}
+            ${className}`}
+        />
+      ) : (
+        <div
+          className={`w-full rounded-md border p-3 min-h-[150px]
+            ${error ? 'border-red-300' : 'border-gray-300'}`}
+          dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
+        />
+      )}
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureMarkdownEditor;

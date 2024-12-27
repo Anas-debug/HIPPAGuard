@@ -1,28 +1,29 @@
-import React from 'react';
+import React, { FormEvent } from 'react';
 
-interface SecureFormProps extends React.FormHTMLAttributes<HTMLFormElement> {
-  onEncryptedSubmit?: (encryptedData: Record<string, string>) => void;
+interface SecureFormProps {
+  children: React.ReactNode;
+  onSubmit: (encryptedData: Record<string, string>) => void;
+  className?: string;
 }
 
-export const SecureForm: React.FC<SecureFormProps> = ({
-  children,
-  onEncryptedSubmit,
-  ...props
-}) => {
-  // Form submission handler
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+const SecureForm: React.FC<SecureFormProps> = ({ children, onSubmit, className = '' }) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Encryption logic would go here
+    const formData = new FormData(e.currentTarget);
     const encryptedData: Record<string, string> = {};
 
-    // Invoke the onEncryptedSubmit callback with encrypted data
-    onEncryptedSubmit?.(encryptedData);
+    formData.forEach((value, key) => {
+      encryptedData[key] = value.toString(); // Replace this with actual encryption logic if needed
+    });
+
+    onSubmit(encryptedData);
   };
 
   return (
-    <form onSubmit={handleSubmit} {...props}>
+    <form onSubmit={handleSubmit} className={className}>
       {children}
     </form>
   );
 };
+
+export default SecureForm;

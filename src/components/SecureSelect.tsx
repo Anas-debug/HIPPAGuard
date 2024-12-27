@@ -14,9 +14,10 @@ interface SecureSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectEl
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
   validateFn?: (value: string) => string | null;
+  className?: string;
 }
 
-export const SecureSelect: React.FC<SecureSelectProps> = ({
+const SecureSelect: React.FC<SecureSelectProps> = ({
   name,
   label,
   options,
@@ -129,3 +130,5 @@ export const SecureSelect: React.FC<SecureSelectProps> = ({
     </div>
   );
 };
+
+export default SecureSelect;

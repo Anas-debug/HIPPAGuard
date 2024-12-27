@@ -1,6 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 
 interface SecureEditorProps {
   name: string;
@@ -8,29 +6,41 @@ interface SecureEditorProps {
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  rows?: number;
 }
 
-export const SecureEditor: React.FC<SecureEditorProps> = ({
+const SecureEditor: React.FC<SecureEditorProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  ...props
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  rows = 4,
 }) => {
-  // State for editor content
   const [content, setContent] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle content changes
-  const handleChange = useCallback((value: string) => {
-    setContent(value);
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setContent(newContent);
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newContent);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, newContent);
+  }, [name, onEncryptedChange, validateFn]);
 
   return (
     <div className="space-y-2">
-      <label
+      <label 
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -44,20 +54,25 @@ export const SecureEditor: React.FC<SecureEditorProps> = ({
         )}
       </label>
 
-      <ReactQuill
+      <textarea
+        id={name}
+        name={name}
         value={content}
         onChange={handleChange}
-        modules={{
-          toolbar: [
-            [{ header: [1, 2, false] }],
-            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-            [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
-            ['link', 'image'],
-            ['clean'],
-          ],
-        }}
-        {...props}
+        rows={rows}
+        className={`block w-full rounded-md border-gray-300 shadow-sm 
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
       />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureEditor;

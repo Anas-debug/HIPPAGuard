@@ -4,46 +4,41 @@ interface SecureTextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLText
   name: string;
   label: string;
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
-  initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
   validateFn?: (value: string) => string | null;
+  className?: string;
 }
 
-export const SecureTextArea: React.FC<SecureTextAreaProps> = ({
+const SecureTextArea: React.FC<SecureTextAreaProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
+  onEncryptedChange,
   validateFn,
   className = '',
   ...props
 }) => {
-  // State for textarea value and validation
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Handle value changes
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
 
-    // Validate if validation function provided
     if (validateFn) {
       const validationError = validateFn(newValue);
       setError(validationError);
       if (validationError) return;
     }
 
-    // Encryption and decryption logic would go here
-  }, [name, validateFn]);
+    if (onEncryptedChange) {
+      onEncryptedChange(name, newValue);
+    }
+  }, [name, onEncryptedChange, validateFn]);
 
   return (
     <div className="space-y-2">
-      <label
-        htmlFor={name}
-        className="block text-sm font-medium text-gray-700"
-      >
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
         {label}
         {sensitivityLevel !== 'standard' && (
           <span className={`ml-2 text-xs ${
@@ -53,9 +48,9 @@ export const SecureTextArea: React.FC<SecureTextAreaProps> = ({
           </span>
         )}
       </label>
-
       <textarea
         id={name}
+        name={name}
         value={value}
         onChange={handleChange}
         className={`block w-full rounded-md border-gray-300 shadow-sm
@@ -65,7 +60,6 @@ export const SecureTextArea: React.FC<SecureTextAreaProps> = ({
         aria-invalid={error ? 'true' : 'false'}
         {...props}
       />
-
       {error && (
         <p className="mt-1 text-sm text-red-600" role="alert">
           {error}
@@ -74,3 +68,5 @@ export const SecureTextArea: React.FC<SecureTextAreaProps> = ({
     </div>
   );
 };
+
+export default SecureTextArea;

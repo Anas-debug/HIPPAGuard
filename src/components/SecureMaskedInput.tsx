@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import InputMask from 'react-input-mask';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
-interface SecureMaskedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface SecureMaskedInputProps {
   name: string;
   label: string;
   mask: string;
@@ -9,41 +8,58 @@ interface SecureMaskedInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
   validateFn?: (value: string) => string | null;
+  className?: string;
 }
 
-export const SecureMaskedInput: React.FC<SecureMaskedInputProps> = ({
+const SecureMaskedInput: React.FC<SecureMaskedInputProps> = ({
   name,
   label,
   mask,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
+  onEncryptedChange,
   validateFn,
   className = '',
-  ...props
 }) => {
-  // State for input value and validation
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Handle value changes
+  const applyMask = useCallback((inputValue: string) => {
+    let maskedValue = '';
+    let valueIndex = 0;
+
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] === '9' && valueIndex < inputValue.length) {
+        maskedValue += inputValue[valueIndex];
+        valueIndex++;
+      } else if (mask[i] !== '9') {
+        maskedValue += mask[i];
+      }
+    }
+
+    return maskedValue;
+  }, [mask]);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setValue(newValue);
+    const rawValue = e.target.value.replace(/[^\d]/g, '');
+    const maskedValue = applyMask(rawValue);
+    
+    setValue(maskedValue);
 
-    // Validate if validation function provided
+    // Validation
     if (validateFn) {
-      const validationError = validateFn(newValue);
+      const validationError = validateFn(maskedValue);
       setError(validationError);
       if (validationError) return;
     }
 
-    // Encryption and decryption logic would go here
-  }, [name, validateFn]);
+    // Encrypt and send
+    onEncryptedChange?.(name, maskedValue);
+  }, [name, onEncryptedChange, validateFn, applyMask]);
 
   return (
     <div className="space-y-2">
-      <label
+      <label 
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -57,17 +73,18 @@ export const SecureMaskedInput: React.FC<SecureMaskedInputProps> = ({
         )}
       </label>
 
-      <InputMask
-        mask={mask}
+      <input
+        ref={inputRef}
+        type="text"
         id={name}
+        name={name}
         value={value}
         onChange={handleChange}
-        className={`block w-full rounded-md border-gray-300 shadow-sm
+        placeholder={mask.replace(/9/g, '_')}
+        className={`block w-full rounded-md border-gray-300 shadow-sm 
           focus:border-blue-500 focus:ring-blue-500 sm:text-sm
           ${error ? 'border-red-300' : 'border-gray-300'}
           ${className}`}
-        aria-invalid={error ? 'true' : 'false'}
-        {...props}
       />
 
       {error && (
@@ -78,3 +95,5 @@ export const SecureMaskedInput: React.FC<SecureMaskedInputProps> = ({
     </div>
   );
 };
+
+export default SecureMaskedInput;

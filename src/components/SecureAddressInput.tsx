@@ -9,17 +9,14 @@ interface SecureAddressInputProps extends Omit<React.InputHTMLAttributes<HTMLInp
   validateFn?: (value: string) => string | null;
 }
 
-export const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
+const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
   validateFn,
   className = '',
   ...props
 }) => {
-  // State for address fields and validation
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
   const [city, setCity] = useState('');
@@ -27,7 +24,6 @@ export const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
   const [zip, setZip] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Handle field changes
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     const newValue = e.target.value;
     switch (field) {
@@ -48,15 +44,12 @@ export const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
         break;
     }
 
-    // Validate if validation function provided
     if (validateFn) {
       const fullAddress = `${address1}, ${address2}, ${city}, ${state} ${zip}`;
       const validationError = validateFn(fullAddress);
       setError(validationError);
       if (validationError) return;
     }
-
-    // Encryption and decryption logic would go here
   }, [address1, address2, city, state, zip, validateFn]);
 
   return (
@@ -160,3 +153,5 @@ export const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
     </div>
   );
 };
+
+export default SecureAddressInput;

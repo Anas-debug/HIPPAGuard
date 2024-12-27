@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { RangeSlider } from '@mantine/core';
 
 interface SecureRangeSliderProps {
   name: string;
@@ -8,34 +7,44 @@ interface SecureRangeSliderProps {
   max?: number;
   step?: number;
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
-  initialEncryptedValue?: string;
+  initialEncryptedValue?: number;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: number) => string | null;
+  className?: string;
 }
 
-export const SecureRangeSlider: React.FC<SecureRangeSliderProps> = ({
+const SecureRangeSlider: React.FC<SecureRangeSliderProps> = ({
   name,
   label,
   min = 0,
   max = 100,
-  step = 1, 
+  step = 1,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  ...props
+  onEncryptedChange,
+  validateFn,
+  className = '',
 }) => {
-  // State for range value
-  const [range, setRange] = useState<[number, number]>([min, max]);
+  const [value, setValue] = useState(min);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle range change
-  const handleChange = useCallback((value: [number, number]) => {
-    setRange(value);
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = Number(e.target.value);
+    setValue(newValue);
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, newValue.toString());
+  }, [name, onEncryptedChange, validateFn]);
 
   return (
     <div className="space-y-2">
-      <label
+      <label 
         htmlFor={name}
         className="block text-sm font-medium text-gray-700"
       >
@@ -44,20 +53,45 @@ export const SecureRangeSlider: React.FC<SecureRangeSliderProps> = ({
           <span className={`ml-2 text-xs ${
             sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
           }`}>
-            ({sensitivityLevel})  
+            ({sensitivityLevel})
           </span>
         )}
       </label>
 
-      <RangeSlider
-        id={name}
-        value={range}
-        onChange={handleChange}
-        min={min}
-        max={max}
-        step={step}
-        {...props}
-      />
+      <div className="flex items-center space-x-4">
+        <input
+          type="range"
+          id={name}
+          name={name}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={handleChange}
+          className={`w-full h-2 rounded-lg appearance-none cursor-pointer
+            bg-gray-200 
+            ${error ? 'bg-red-200' : 'bg-gray-200'}
+            ${className}`}
+          style={{
+            background: `linear-gradient(to right, 
+              #3b82f6 0%, 
+              #3b82f6 ${((value - min) / (max - min)) * 100}%, 
+              #e5e7eb ${((value - min) / (max - min)) * 100}%, 
+              #e5e7eb 100%)`
+          }}
+        />
+        <span className="text-sm text-gray-700 w-16 text-right">
+          {value}
+        </span>
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureRangeSlider;

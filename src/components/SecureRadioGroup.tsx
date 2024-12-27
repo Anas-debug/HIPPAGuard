@@ -1,70 +1,126 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { SecurityCore } from '../core/security-core';
 
-interface SecureRadioGroupProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+interface RadioOption {
+  value: string;
+  label: string;
+}
+
+interface SecureRadioGroupProps {
   name: string;
   label: string;
-  options: string[];
+  options: Array<string | RadioOption>;
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
 }
 
-export const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
+const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
   name,
   label,
   options,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
-  className = '',
-  ...props
+  initialEncryptedValue,
+  onEncryptedChange,
+  validateFn,
+  className = ''
 }) => {
-  // State for selected option
-  const [selectedOption, setSelectedOption] = useState('');
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Handle option changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newOption = e.target.value;
-    setSelectedOption(newOption);
+  const securityCore = new SecurityCore();
 
-    // Encryption and decryption logic would go here
-  }, [name]);
+  useEffect(() => {
+    const decryptInitialValue = async () => {
+      if (initialEncryptedValue) {
+        try {
+          await securityCore.initialize('temp-key');
+          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          setValue(typeof decrypted === 'string' ? decrypted : '');
+        } catch (err) {
+          setError('Failed to decrypt initial value');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    decryptInitialValue();
+  }, [initialEncryptedValue]);
+
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    try {
+      await securityCore.initialize('temp-key');
+      const encryptedValue = await securityCore.encrypt(newValue);
+      onEncryptedChange?.(name, encryptedValue);
+    } catch (err) {
+      setError('Failed to encrypt value');
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  if (isLoading) {
+    return <div className="animate-pulse h-20 bg-gray-100 rounded" />;
+  }
 
   return (
-    <div>
-      <div className="text-sm font-medium text-gray-900 mb-2">
+    <div className={`space-y-2 ${className}`}>
+      <label className="block text-sm font-medium text-gray-700">
         {label}
         {sensitivityLevel !== 'standard' && (
-          <span className={`ml-1 text-xs ${
+          <span className={`ml-2 text-xs ${
             sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
           }`}>
             ({sensitivityLevel})
           </span>
         )}
-      </div>
+      </label>
+
       <div className="space-y-2">
-        {options.map((option) => (
-          <div key={option} className="flex items-center">
-            <input
-              type="radio"
-              id={`${name}-${option}`}
-              name={name}
-              value={option}
-              checked={selectedOption === option}
-              onChange={handleChange}
-              className={`form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out
-                ${className}`}
-              {...props}
-            />
-            <label
-              htmlFor={`${name}-${option}`}
-              className="ml-2 block text-sm text-gray-900"
-            >
-              {option}
-            </label>
-          </div>
-        ))}
+        {options.map((option, index) => {
+          const optionValue = typeof option === 'string' ? option : option.value;
+          const optionLabel = typeof option === 'string' ? option : option.label;
+          const optionId = `${name}-${optionValue}`;
+
+          return (
+            <div key={optionId} className="flex items-center">
+              <input
+                type="radio"
+                id={optionId}
+                name={name}
+                value={optionValue}
+                checked={value === optionValue}
+                onChange={handleChange}
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label
+                htmlFor={optionId}
+                className="ml-3 block text-sm font-medium text-gray-700"
+              >
+                {optionLabel}
+              </label>
+            </div>
+          );
+        })}
       </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
+
+export default SecureRadioGroup;
