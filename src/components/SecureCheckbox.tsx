@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { SecurityCore } from '../core/security-core';
+import { useSecurity } from '../contexts/SecurityContext';
 
 interface SecureCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'type'> {
   name: string;
@@ -10,7 +10,7 @@ interface SecureCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputEl
   validateFn?: (value: boolean) => string | null;
 }
 
-const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
+export const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
   name,
   label,
   sensitivityLevel = 'standard',
@@ -20,28 +20,27 @@ const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
   className = '',
   ...props
 }) => {
+  const { encrypt, decrypt, isInitialized } = useSecurity();
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const securityCore = new SecurityCore();
-
   useEffect(() => {
     const decryptInitialValue = async () => {
-      if (initialEncryptedValue) {
+      if (initialEncryptedValue && isInitialized) {
         try {
-          await securityCore.initialize('temp-key');
-          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          const decrypted = await decrypt(initialEncryptedValue);
           setChecked(decrypted === 'true');
         } catch (err) {
           setError('Failed to decrypt initial value');
+          console.error('Decryption error:', err);
         }
       }
       setIsLoading(false);
     };
 
     decryptInitialValue();
-  }, [initialEncryptedValue]);
+  }, [initialEncryptedValue, decrypt, isInitialized]);
 
   const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.checked;
@@ -54,13 +53,15 @@ const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
     }
 
     try {
-      await securityCore.initialize('temp-key');
-      const encryptedValue = await securityCore.encrypt(String(newValue));
-      onEncryptedChange?.(name, encryptedValue);
+      if (isInitialized && onEncryptedChange) {
+        const encryptedValue = await encrypt(String(newValue));
+        onEncryptedChange(name, encryptedValue);
+      }
     } catch (err) {
       setError('Failed to encrypt value');
+      console.error('Encryption error:', err);
     }
-  }, [name, onEncryptedChange, validateFn]);
+  }, [name, onEncryptedChange, validateFn, encrypt, isInitialized]);
 
   if (isLoading) {
     return <div className="animate-pulse h-5 w-5 bg-gray-100 rounded" />;
@@ -76,25 +77,23 @@ const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
           onChange={handleChange}
           className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${className}`}
           aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${name}-error` : undefined}
           {...props}
         />
       </div>
-      <div className="ml-3 text-sm">
-        <label
-          htmlFor={name}
-          className="font-medium text-gray-700"
-        >
+      <div className="ml-3">
+        <label htmlFor={name} className="text-sm text-gray-900">
           {label}
           {sensitivityLevel !== 'standard' && (
-            <span className={`ml-2 text-xs ${
-              sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+            <span className={`ml-2 text-xs px-2 py-1 rounded-full inline-block ${
+              sensitivityLevel === 'PHI' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
             }`}>
-              ({sensitivityLevel})
+              {sensitivityLevel}
             </span>
           )}
         </label>
         {error && (
-          <p className="mt-1 text-sm text-red-600" role="alert">
+          <p className="mt-1 text-sm text-red-600" id={`${name}-error`} role="alert">
             {error}
           </p>
         )}

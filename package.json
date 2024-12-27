@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "dompurify": "^3.2.3",
+    "lucide-react": "^0.469.0",
     "marked": "^15.0.4"
   }
 }

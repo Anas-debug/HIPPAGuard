@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { SecurityCore } from '../core/security-core';
+import { useSecurity } from '../contexts/SecurityContext';
 
 interface SelectOption {
   value: string;
@@ -17,7 +17,7 @@ interface SecureSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectEl
   className?: string;
 }
 
-const SecureSelect: React.FC<SecureSelectProps> = ({
+export const SecureSelect: React.FC<SecureSelectProps> = ({
   name,
   label,
   options,
@@ -28,18 +28,16 @@ const SecureSelect: React.FC<SecureSelectProps> = ({
   className = '',
   ...props
 }) => {
+  const { encrypt, decrypt, isInitialized } = useSecurity();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const securityCore = new SecurityCore();
-
   useEffect(() => {
     const decryptInitialValue = async () => {
-      if (initialEncryptedValue) {
+      if (initialEncryptedValue && isInitialized) {
         try {
-          await securityCore.initialize('temp-key');
-          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          const decrypted = await decrypt(initialEncryptedValue);
           setValue(typeof decrypted === 'string' ? decrypted : '');
         } catch (err) {
           setError('Failed to decrypt initial value');
@@ -49,7 +47,7 @@ const SecureSelect: React.FC<SecureSelectProps> = ({
     };
 
     decryptInitialValue();
-  }, [initialEncryptedValue]);
+  }, [initialEncryptedValue, decrypt, isInitialized]);
 
   const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = e.target.value;
@@ -62,13 +60,15 @@ const SecureSelect: React.FC<SecureSelectProps> = ({
     }
 
     try {
-      await securityCore.initialize('temp-key');
-      const encryptedValue = await securityCore.encrypt(newValue);
-      onEncryptedChange?.(name, encryptedValue);
+      if (isInitialized && onEncryptedChange) {
+        const encryptedValue = await encrypt(newValue);
+        onEncryptedChange(name, encryptedValue);
+      }
     } catch (err) {
       setError('Failed to encrypt value');
+      console.error('Encryption error:', err);
     }
-  }, [name, onEncryptedChange, validateFn]);
+  }, [name, onEncryptedChange, validateFn, encrypt, isInitialized]);
 
   const renderOptions = () => {
     return options.map((option, index) => {
@@ -92,17 +92,17 @@ const SecureSelect: React.FC<SecureSelectProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <label
         htmlFor={name}
-        className="block text-sm font-medium text-gray-700"
+        className="block text-sm font-medium text-gray-900"
       >
         {label}
         {sensitivityLevel !== 'standard' && (
-          <span className={`ml-2 text-xs ${
-            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
+            sensitivityLevel === 'PHI' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
           }`}>
-            ({sensitivityLevel})
+            {sensitivityLevel}
           </span>
         )}
       </label>
@@ -111,19 +111,18 @@ const SecureSelect: React.FC<SecureSelectProps> = ({
         id={name}
         value={value}
         onChange={handleChange}
-        className={`block w-full rounded-md border-gray-300 shadow-sm
-          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm
           ${error ? 'border-red-300' : 'border-gray-300'}
           ${className}`}
         aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${name}-error` : undefined}
         {...props}
       >
-        <option value="">Select an option</option>
         {renderOptions()}
       </select>
 
       {error && (
-        <p className="mt-1 text-sm text-red-600" role="alert">
+        <p className="mt-1 text-sm text-red-600" id={`${name}-error`} role="alert">
           {error}
         </p>
       )}

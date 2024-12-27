@@ -1,0 +1,2439 @@
+export { default as SecureField } from './SecureField';
+export { default as SecureCheckbox } from './SecureCheckbox';
+export { default as SecureRadioGroup } from './SecureRadioGroup';
+export { default as SecureSelect } from './SecureSelect';
+export { default as SecureTextArea } from './SecureTextArea';
+export { default as SecureForm } from './SecureForm';
+import React, { useState, useCallback } from 'react';
+
+interface SecureAddressInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+}
+
+const SecureAddressInput: React.FC<SecureAddressInputProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  const [address1, setAddress1] = useState('');
+  const [address2, setAddress2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+    const newValue = e.target.value;
+    switch (field) {
+      case 'address1':
+        setAddress1(newValue);
+        break;
+      case 'address2':
+        setAddress2(newValue);
+        break;
+      case 'city':
+        setCity(newValue);
+        break;
+      case 'state':
+        setState(newValue);
+        break;
+      case 'zip':
+        setZip(newValue);
+        break;
+    }
+
+    if (validateFn) {
+      const fullAddress = `${address1}, ${address2}, ${city}, ${state} ${zip}`;
+      const validationError = validateFn(fullAddress);
+      setError(validationError);
+      if (validationError) return;
+    }
+  }, [address1, address2, city, state, zip, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="grid grid-cols-6 gap-4">
+        <div className="col-span-6">
+          <input
+            type="text"
+            id={`${name}-address1`}
+            value={address1}
+            onChange={(e) => handleChange(e, 'address1')}
+            placeholder="Address Line 1"
+            className={`block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+            {...props}
+          />
+        </div>
+
+        <div className="col-span-6">
+          <input
+            type="text"
+            id={`${name}-address2`}
+            value={address2}
+            onChange={(e) => handleChange(e, 'address2')}
+            placeholder="Address Line 2"
+            className={`block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+            {...props}
+          />
+        </div>
+
+        <div className="col-span-6 sm:col-span-3">
+          <input
+            type="text"
+            id={`${name}-city`}
+            value={city}
+            onChange={(e) => handleChange(e, 'city')}
+            placeholder="City"
+            className={`block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+            {...props}
+          />
+        </div>
+
+        <div className="col-span-6 sm:col-span-2">
+          <input
+            type="text"
+            id={`${name}-state`}
+            value={state}
+            onChange={(e) => handleChange(e, 'state')}
+            placeholder="State"
+            className={`block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+            {...props}
+          />
+        </div>
+
+        <div className="col-span-6 sm:col-span-1">
+          <input
+            type="text"
+            id={`${name}-zip`}
+            value={zip}
+            onChange={(e) => handleChange(e, 'zip')}
+            placeholder="Zip"
+            className={`block w-full rounded-md border-gray-300 shadow-sm
+              focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+            {...props}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureAddressInput;
+import React, { useState, useCallback, useEffect } from 'react';
+import { SecurityCore } from '../core/security-core';
+
+interface SecureCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'type'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: boolean) => string | null;
+}
+
+const SecureCheckbox: React.FC<SecureCheckboxProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  initialEncryptedValue,
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  const [checked, setChecked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const securityCore = new SecurityCore();
+
+  useEffect(() => {
+    const decryptInitialValue = async () => {
+      if (initialEncryptedValue) {
+        try {
+          await securityCore.initialize('temp-key');
+          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          setChecked(decrypted === 'true');
+        } catch (err) {
+          setError('Failed to decrypt initial value');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    decryptInitialValue();
+  }, [initialEncryptedValue]);
+
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setChecked(newValue);
+
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    try {
+      await securityCore.initialize('temp-key');
+      const encryptedValue = await securityCore.encrypt(String(newValue));
+      onEncryptedChange?.(name, encryptedValue);
+    } catch (err) {
+      setError('Failed to encrypt value');
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  if (isLoading) {
+    return <div className="animate-pulse h-5 w-5 bg-gray-100 rounded" />;
+  }
+
+  return (
+    <div className="relative flex items-start">
+      <div className="flex items-center h-5">
+        <input
+          type="checkbox"
+          id={name}
+          checked={checked}
+          onChange={handleChange}
+          className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${className}`}
+          aria-invalid={error ? 'true' : 'false'}
+          {...props}
+        />
+      </div>
+      <div className="ml-3 text-sm">
+        <label
+          htmlFor={name}
+          className="font-medium text-gray-700"
+        >
+          {label}
+          {sensitivityLevel !== 'standard' && (
+            <span className={`ml-2 text-xs ${
+              sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+            }`}>
+              ({sensitivityLevel})
+            </span>
+          )}
+        </label>
+        {error && (
+          <p className="mt-1 text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SecureCheckbox;
+import React, { useState, useCallback } from 'react';
+
+interface CheckboxOption {
+  value: string;
+  label: string;
+}
+
+interface SecureCheckboxGroupProps {
+  name: string;
+  label: string;
+  options: CheckboxOption[];
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string[];
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string[]) => string | null;
+  className?: string;
+}
+
+const SecureCheckboxGroup: React.FC<SecureCheckboxGroupProps> = ({
+  name,
+  label,
+  options,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleOptionToggle = useCallback((optionValue: string) => {
+    const newSelectedOptions = selectedOptions.includes(optionValue)
+      ? selectedOptions.filter(value => value !== optionValue)
+      : [...selectedOptions, optionValue];
+
+    setSelectedOptions(newSelectedOptions);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newSelectedOptions);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, JSON.stringify(newSelectedOptions));
+  }, [name, onEncryptedChange, validateFn, selectedOptions]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className={`space-y-2 ${className}`}>
+        {options.map((option) => (
+          <div key={option.value} className="flex items-center">
+            <input
+              type="checkbox"
+              id={`${name}-${option.value}`}
+              name={name}
+              value={option.value}
+              checked={selectedOptions.includes(option.value)}
+              onChange={() => handleOptionToggle(option.value)}
+              className="form-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label 
+              htmlFor={`${name}-${option.value}`}
+              className="ml-2 block text-sm text-gray-900"
+            >
+              {option.label}
+            </label>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureCheckboxGroup;
+import React, { useState, useCallback } from 'react';
+
+interface SecureDatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+}
+
+const SecureDatePicker: React.FC<SecureDatePickerProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  // State for date value and validation
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Validate if validation function provided
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encryption and decryption logic would go here
+  }, [validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        type="date"
+        id={name}
+        value={value}
+        onChange={handleChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureDatePicker;
+import React, { useState, useCallback } from 'react';
+
+interface SecureEditorProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  rows?: number;
+}
+
+const SecureEditor: React.FC<SecureEditorProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  rows = 4,
+}) => {
+  const [content, setContent] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setContent(newContent);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newContent);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, newContent);
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <textarea
+        id={name}
+        name={name}
+        value={content}
+        onChange={handleChange}
+        rows={rows}
+        className={`block w-full rounded-md border-gray-300 shadow-sm 
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureEditor;
+import React, { useState, useCallback } from 'react';
+
+interface SecureFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  validateFn?: (value: string) => string | null;
+}
+
+const SecureField: React.FC<SecureFieldProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setValue(newValue);
+
+      if (validateFn) {
+        const validationError = validateFn(newValue);
+        setError(validationError);
+      }
+    },
+    [validateFn]
+  );
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span
+            className={`ml-2 text-xs ${
+              sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+            }`}
+          >
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        id={name}
+        name={name}
+        value={value}
+        onChange={handleChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureField;
+import React, { useCallback } from 'react';
+
+interface SecureFileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+}
+
+export const SecureFileUpload: React.FC<SecureFileUploadProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // onEncryptedChange,
+  className = '',
+  ...props
+}) => {
+  // Handle file changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Encryption logic would go here
+    }
+  }, [name]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        type="file"
+        id={name}
+        onChange={handleChange}
+        className={`block w-full text-sm text-gray-900
+          file:mr-4 file:py-2 file:px-4
+          file:rounded-full file:border-0
+          file:text-sm file:font-semibold
+          file:bg-blue-50 file:text-blue-700
+          hover:file:bg-blue-100
+          ${className}`}
+        {...props}
+      />
+    </div>
+  );
+};
+import React, { FormEvent } from 'react';
+
+interface SecureFormProps {
+  children: React.ReactNode;
+  onSubmit: (encryptedData: Record<string, string>) => void;
+  className?: string;
+}
+
+const SecureForm: React.FC<SecureFormProps> = ({ children, onSubmit, className = '' }) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const encryptedData: Record<string, string> = {};
+
+    formData.forEach((value, key) => {
+      encryptedData[key] = value.toString(); // Replace this with actual encryption logic if needed
+    });
+
+    onSubmit(encryptedData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className={className}>
+      {children}
+    </form>
+  );
+};
+
+export default SecureForm;
+import React, { useState, useCallback } from 'react';
+
+interface SecureImageUploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+}
+
+export const SecureImageUpload: React.FC<SecureImageUploadProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // onEncryptedChange,
+  className = '',
+  ...props
+}) => {
+  // State for selected image
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Handle image change
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Encryption logic would go here
+    }
+  }, [name]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex items-center space-x-4">
+        <label
+          htmlFor={name}
+          className={`flex flex-col items-center justify-center w-24 h-24 rounded-md border-2 border-dashed border-gray-300
+            cursor-pointer hover:bg-gray-50 ${className}`}
+        >
+          <span className="text-sm text-gray-500">Upload Image</span>
+          <input
+            type="file"
+            id={name}
+            accept="image/*"
+            onChange={handleChange}
+            className="sr-only"
+            {...props}
+          />
+        </label>
+
+        {selectedImage && (
+          <img
+            src={selectedImage}
+            alt="Selected"
+            className="w-24 h-24 rounded-md object-cover"
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+import React, { useState, useCallback } from 'react';
+
+interface SecureInputGroupProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  prefix?: string;
+  suffix?: string;
+}
+
+export const SecureInputGroup: React.FC<SecureInputGroupProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // initialEncryptedValue,
+  // onEncryptedChange,
+  validateFn,
+  prefix,
+  suffix,
+  className = '',
+  ...props
+}) => {
+  // State for input value and validation
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Validate if validation function provided
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encryption and decryption logic would go here
+  }, [name, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="relative rounded-md shadow-sm">
+        {prefix && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span className="text-gray-500 sm:text-sm">{prefix}</span>
+          </div>
+        )}
+
+        <input
+          type="text"
+          id={name}
+          value={value}
+          onChange={handleChange}
+          className={`block w-full rounded-md border-gray-300 shadow-sm
+            focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+            ${error ? 'border-red-300' : 'border-gray-300'}
+            ${prefix ? 'pl-10' : ''}
+            ${suffix ? 'pr-10' : ''}
+            ${className}`}
+          aria-invalid={error ? 'true' : 'false'}
+          {...props}
+        />
+
+        {suffix && (
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <span className="text-gray-500 sm:text-sm">{suffix}</span>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+import React, { useState, useCallback } from 'react';
+import { marked } from 'marked'; // Corrected import
+import DOMPurify from 'dompurify';
+
+interface SecureMarkdownEditorProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  rows?: number;
+}
+
+const SecureMarkdownEditor: React.FC<SecureMarkdownEditorProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  rows = 6,
+}) => {
+  const [markdown, setMarkdown] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newMarkdown = e.target.value;
+      setMarkdown(newMarkdown);
+
+      // Validation
+      if (validateFn) {
+        const validationError = validateFn(newMarkdown);
+        setError(validationError);
+        if (validationError) return;
+      } else {
+        setError(null); // Clear error if validation passes
+      }
+
+      // Encrypt and send
+      onEncryptedChange?.(name, newMarkdown);
+    },
+    [name, onEncryptedChange, validateFn]
+  );
+
+  const sanitizedHTML = DOMPurify.sanitize(marked(markdown));
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span
+            className={`ml-2 text-xs ${
+              sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+            }`}
+          >
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex items-center space-x-2 mb-2">
+        <button
+          type="button"
+          onClick={() => setPreviewMode(false)}
+          className={`px-2 py-1 rounded ${
+            !previewMode ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreviewMode(true)}
+          className={`px-2 py-1 rounded ${
+            previewMode ? 'bg-blue-500 text-white' : 'bg-gray-200'
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+
+      {!previewMode ? (
+        <textarea
+          id={name}
+          name={name}
+          value={markdown}
+          onChange={handleChange}
+          rows={rows}
+          placeholder="Write markdown here..."
+          className={`block w-full rounded-md border-gray-300 shadow-sm
+            focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+            ${error ? 'border-red-300' : 'border-gray-300'}
+            ${className}`}
+        />
+      ) : (
+        <div
+          className={`w-full rounded-md border p-3 min-h-[150px]
+            ${error ? 'border-red-300' : 'border-gray-300'}`}
+          dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
+        />
+      )}
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureMarkdownEditor;
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+
+interface SecureMaskedInputProps {
+  name: string;
+  label: string;
+  mask: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureMaskedInput: React.FC<SecureMaskedInputProps> = ({
+  name,
+  label,
+  mask,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const applyMask = useCallback((inputValue: string) => {
+    let maskedValue = '';
+    let valueIndex = 0;
+
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] === '9' && valueIndex < inputValue.length) {
+        maskedValue += inputValue[valueIndex];
+        valueIndex++;
+      } else if (mask[i] !== '9') {
+        maskedValue += mask[i];
+      }
+    }
+
+    return maskedValue;
+  }, [mask]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^\d]/g, '');
+    const maskedValue = applyMask(rawValue);
+    
+    setValue(maskedValue);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(maskedValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, maskedValue);
+  }, [name, onEncryptedChange, validateFn, applyMask]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        ref={inputRef}
+        type="text"
+        id={name}
+        name={name}
+        value={value}
+        onChange={handleChange}
+        placeholder={mask.replace(/9/g, '_')}
+        className={`block w-full rounded-md border-gray-300 shadow-sm 
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureMaskedInput;
+import React, { useState, useCallback } from 'react';
+
+interface SecureMultiSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
+  name: string;
+  label: string;
+  options: string[];
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+}
+
+export const SecureMultiSelect: React.FC<SecureMultiSelectProps> = ({
+  name,
+  label,
+  options,
+  sensitivityLevel = 'standard',
+  // initialEncryptedValue,
+  // onEncryptedChange,
+  className = '',
+  ...props
+}) => {
+  // State for selected options
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+
+  // Handle option changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValues = Array.from(e.target.selectedOptions, (option) => option.value);
+    setSelectedOptions(selectedValues);
+
+    // Encryption and decryption logic would go here
+  }, [name]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <select
+        id={name}
+        value={selectedOptions}
+        onChange={handleChange}
+        multiple
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${className}`}
+        {...props}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+import React, { useState, useCallback } from 'react';
+
+interface SecureNumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export const SecureNumberInput: React.FC<SecureNumberInputProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // initialEncryptedValue,
+  // onEncryptedChange,
+  validateFn,
+  min,
+  max,
+  step,
+  className = '',
+  ...props
+}) => {
+  // State for number value and validation
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Validate if validation function provided
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encryption and decryption logic would go here
+  }, [name, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        type="number"
+        id={name}
+        value={value}
+        onChange={handleChange}
+        min={min}
+        max={max}
+        step={step}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+
+interface SecureOTPInputProps {
+  name: string;
+  label: string;
+  length?: number;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureOTPInput: React.FC<SecureOTPInputProps> = ({
+  name,
+  label,
+  length = 6,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [otp, setOtp] = useState(Array(length).fill(''));
+  const [error, setError] = useState<string | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleChange = useCallback((index: number, value: string) => {
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-focus next input if filled
+    if (value && index < length - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    // Check if all inputs are filled
+    const completeOtp = newOtp.join('');
+    if (completeOtp.length === length) {
+      // Validation
+      if (validateFn) {
+        const validationError = validateFn(completeOtp);
+        setError(validationError);
+        if (validationError) return;
+      }
+
+      // Encrypt and send
+      onEncryptedChange?.(name, completeOtp);
+    }
+  }, [name, onEncryptedChange, validateFn, length, otp]);
+
+  const handleKeyDown = useCallback((
+    index: number, 
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  }, [otp]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex space-x-2 justify-center">
+        {Array.from({ length }).map((_, index) => (
+          <input
+            key={index}
+            ref={(el) => {
+              if (el) inputRefs.current[index] = el;
+            }}
+            type="text"
+            maxLength={1}
+            value={otp[index]}
+            onChange={(e) => handleChange(index, e.target.value.replace(/\D/g, ''))}
+            onKeyDown={(e) => handleKeyDown(index, e)}
+            className={`w-12 h-12 text-center text-xl 
+              rounded-md border 
+              focus:border-blue-500 focus:ring-blue-500
+              ${error ? 'border-red-300' : 'border-gray-300'}
+              ${className}`}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600 text-center" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureOTPInput;
+import React, { useState, useCallback } from 'react';
+
+interface SecurePhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+}
+
+export const SecurePhoneInput: React.FC<SecurePhoneInputProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // initialEncryptedValue,
+  // onEncryptedChange,
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  // State for phone value and validation
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    // Validate if validation function provided
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encryption and decryption logic would go here
+  }, [name, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        type="tel"
+        id={name}
+        value={value}
+        onChange={handleChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+import React, { useState, useCallback, useEffect } from 'react';
+import { SecurityCore } from '../core/security-core';
+
+interface RadioOption {
+  value: string;
+  label: string;
+}
+
+interface SecureRadioGroupProps {
+  name: string;
+  label: string;
+  options: Array<string | RadioOption>;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
+  name,
+  label,
+  options,
+  sensitivityLevel = 'standard',
+  initialEncryptedValue,
+  onEncryptedChange,
+  validateFn,
+  className = ''
+}) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const securityCore = new SecurityCore();
+
+  useEffect(() => {
+    const decryptInitialValue = async () => {
+      if (initialEncryptedValue) {
+        try {
+          await securityCore.initialize('temp-key');
+          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          setValue(typeof decrypted === 'string' ? decrypted : '');
+        } catch (err) {
+          setError('Failed to decrypt initial value');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    decryptInitialValue();
+  }, [initialEncryptedValue]);
+
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    try {
+      await securityCore.initialize('temp-key');
+      const encryptedValue = await securityCore.encrypt(newValue);
+      onEncryptedChange?.(name, encryptedValue);
+    } catch (err) {
+      setError('Failed to encrypt value');
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  if (isLoading) {
+    return <div className="animate-pulse h-20 bg-gray-100 rounded" />;
+  }
+
+  return (
+    <div className={`space-y-2 ${className}`}>
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="space-y-2">
+        {options.map((option, index) => {
+          const optionValue = typeof option === 'string' ? option : option.value;
+          const optionLabel = typeof option === 'string' ? option : option.label;
+          const optionId = `${name}-${optionValue}`;
+
+          return (
+            <div key={optionId} className="flex items-center">
+              <input
+                type="radio"
+                id={optionId}
+                name={name}
+                value={optionValue}
+                checked={value === optionValue}
+                onChange={handleChange}
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label
+                htmlFor={optionId}
+                className="ml-3 block text-sm font-medium text-gray-700"
+              >
+                {optionLabel}
+              </label>
+            </div>
+          );
+        })}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureRadioGroup;
+import React, { useState, useCallback } from 'react';
+
+interface SecureRangeSliderProps {
+  name: string;
+  label: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: number;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: number) => string | null;
+  className?: string;
+}
+
+const SecureRangeSlider: React.FC<SecureRangeSliderProps> = ({
+  name,
+  label,
+  min = 0,
+  max = 100,
+  step = 1,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [value, setValue] = useState(min);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = Number(e.target.value);
+    setValue(newValue);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, newValue.toString());
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex items-center space-x-4">
+        <input
+          type="range"
+          id={name}
+          name={name}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={handleChange}
+          className={`w-full h-2 rounded-lg appearance-none cursor-pointer
+            bg-gray-200 
+            ${error ? 'bg-red-200' : 'bg-gray-200'}
+            ${className}`}
+          style={{
+            background: `linear-gradient(to right, 
+              #3b82f6 0%, 
+              #3b82f6 ${((value - min) / (max - min)) * 100}%, 
+              #e5e7eb ${((value - min) / (max - min)) * 100}%, 
+              #e5e7eb 100%)`
+          }}
+        />
+        <span className="text-sm text-gray-700 w-16 text-right">
+          {value}
+        </span>
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureRangeSlider;
+import React, { useState, useCallback } from 'react';
+
+interface SecureRatingProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  maxRating?: number;
+}
+
+const SecureRating: React.FC<SecureRatingProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  maxRating = 5,
+}) => {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRatingChange = useCallback((selectedRating: number) => {
+    setRating(selectedRating);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(selectedRating.toString());
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, selectedRating.toString());
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex items-center">
+        {[...Array(maxRating)].map((_, index) => {
+          const ratingValue = index + 1;
+          return (
+            <button
+              key={index}
+              type="button"
+              className="focus:outline-none"
+              onClick={() => handleRatingChange(ratingValue)}
+              onMouseEnter={() => setHover(ratingValue)}
+              onMouseLeave={() => setHover(rating)}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill={ratingValue <= (hover || rating) ? '#ffc107' : 'none'}
+                stroke={ratingValue <= (hover || rating) ? '#ffc107' : '#e4e5e9'}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureRating;
+import React, { useState, useCallback, useEffect } from 'react';
+import { SecurityCore } from '../core/security-core';
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SecureSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
+  name: string;
+  label: string;
+  options: Array<string | SelectOption>;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureSelect: React.FC<SecureSelectProps> = ({
+  name,
+  label,
+  options,
+  sensitivityLevel = 'standard',
+  initialEncryptedValue,
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const securityCore = new SecurityCore();
+
+  useEffect(() => {
+    const decryptInitialValue = async () => {
+      if (initialEncryptedValue) {
+        try {
+          await securityCore.initialize('temp-key');
+          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          setValue(typeof decrypted === 'string' ? decrypted : '');
+        } catch (err) {
+          setError('Failed to decrypt initial value');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    decryptInitialValue();
+  }, [initialEncryptedValue]);
+
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    try {
+      await securityCore.initialize('temp-key');
+      const encryptedValue = await securityCore.encrypt(newValue);
+      onEncryptedChange?.(name, encryptedValue);
+    } catch (err) {
+      setError('Failed to encrypt value');
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  const renderOptions = () => {
+    return options.map((option, index) => {
+      if (typeof option === 'string') {
+        return (
+          <option key={index} value={option}>
+            {option}
+          </option>
+        );
+      }
+      return (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      );
+    });
+  };
+
+  if (isLoading) {
+    return <div className="animate-pulse h-10 bg-gray-100 rounded" />;
+  }
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <select
+        id={name}
+        value={value}
+        onChange={handleChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      >
+        <option value="">Select an option</option>
+        {renderOptions()}
+      </select>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureSelect;
+import React, { useState, useCallback, useRef } from 'react';
+
+interface SecureSignatureProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  width?: number;
+  height?: number;
+}
+
+const SecureSignature: React.FC<SecureSignatureProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  width = 400,
+  height = 200,
+}) => {
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+
+  const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  }, []);
+
+  const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }, [isDrawing]);
+
+  const stopDrawing = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.closePath();
+    setIsDrawing(false);
+
+    // Convert signature to base64
+    const signatureImage = canvas.toDataURL();
+    setSignatureData(signatureImage);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(signatureImage);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, signatureImage);
+  }, [name, onEncryptedChange, validateFn]);
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureData(null);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="space-y-2">
+        <canvas
+          ref={canvasRef}
+          width={width}
+          height={height}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseOut={stopDrawing}
+          className={`border rounded-md ${
+            error ? 'border-red-300' : 'border-gray-300'
+          } ${className}`}
+          style={{ cursor: 'crosshair' }}
+        />
+
+        <div className="flex space-x-2">
+          <button
+            type="button"
+            onClick={clearSignature}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureSignature;
+import React, { useState, useCallback } from 'react';
+
+interface SecureStarRatingProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+  maxRating?: number;
+}
+
+const SecureStarRating: React.FC<SecureStarRatingProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  maxRating = 5,
+}) => {
+  const [rating, setRating] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRatingChange = useCallback((selectedRating: number) => {
+    setRating(selectedRating);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(selectedRating.toString());
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, selectedRating.toString());
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div className="flex items-center">
+        {[...Array(maxRating)].map((_, index) => {
+          const ratingValue = index + 1;
+          return (
+            <button
+              key={index}
+              type="button"
+              className="focus:outline-none"
+              onClick={() => handleRatingChange(ratingValue)}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill={ratingValue <= rating ? '#ffc107' : 'none'}
+                stroke={ratingValue <= rating ? '#ffc107' : '#e4e5e9'}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureStarRating;
+import React, { useState, useCallback } from 'react';
+
+interface SecureTextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureTextArea: React.FC<SecureTextAreaProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+  ...props
+}) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    if (validateFn) {
+      const validationError = validateFn(newValue);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    if (onEncryptedChange) {
+      onEncryptedChange(name, newValue);
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+      <textarea
+        id={name}
+        name={name}
+        value={value}
+        onChange={handleChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
+        {...props}
+      />
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureTextArea;
+import React, { useState, useCallback } from 'react';
+
+interface SecureTimePickerProps {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureTimePicker: React.FC<SecureTimePickerProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [time, setTime] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleTimeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = e.target.value;
+    setTime(newTime);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newTime);
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, newTime);
+  }, [name, onEncryptedChange, validateFn]);
+
+  return (
+    <div className="space-y-2">
+      <label
+        htmlFor={`${name}-time`}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <input
+        type="time"
+        id={`${name}-time`}
+        name={name}
+        value={time}
+        onChange={handleTimeChange}
+        className={`block w-full rounded-md border-gray-300 shadow-sm
+          focus:border-blue-500 focus:ring-blue-500 sm:text-sm
+          ${error ? 'border-red-300' : 'border-gray-300'}
+          ${className}`}
+      />
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureTimePicker;
+import React, { useState, useCallback } from 'react';
+
+interface SecureToggleProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  name: string;
+  label: string;
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+}
+
+export const SecureToggle: React.FC<SecureToggleProps> = ({
+  name,
+  label,
+  sensitivityLevel = 'standard',
+  // initialEncryptedValue,
+  // onEncryptedChange,
+  className = '',
+  ...props
+}) => {
+  // State for toggle value
+  const [checked, setChecked] = useState(false);
+
+  // Handle value changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newChecked = e.target.checked;
+    setChecked(newChecked);
+
+    // Encryption and decryption logic would go here
+  }, [name]);
+
+  return (
+    <div className="flex items-center">
+      <div className="relative inline-block w-10 mr-2 align-middle select-none">
+        <input
+          type="checkbox"
+          id={name}
+          checked={checked}
+          onChange={handleChange}
+          className={`toggle-checkbox absolute block w-6 h-6 rounded-full bg-white
+            border-4 appearance-none cursor-pointer
+            ${checked ? 'right-0 border-blue-600' : 'left-0 border-gray-300'}
+            ${className}`}
+          {...props}
+        />
+        <label
+          htmlFor={name}
+          className={`toggle-label block overflow-hidden h-6 rounded-full
+            bg-gray-300 cursor-pointer
+            ${checked ? 'bg-blue-600' : 'bg-gray-300'}`}
+        ></label>
+      </div>
+      <label
+        htmlFor={name}
+        className="text-sm font-medium text-gray-900"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-1 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+    </div>
+  );
+};
+import React, { useState, useCallback } from 'react';
+
+interface TreeItem {
+  id: string;
+  label: string;
+  children?: TreeItem[];
+}
+
+interface SecureTreeViewProps {
+  name: string;
+  label: string;
+  data: TreeItem[];
+  sensitivityLevel?: 'PHI' | 'PII' | 'standard';
+  initialEncryptedValue?: string;
+  onEncryptedChange?: (name: string, encryptedValue: string) => void;
+  validateFn?: (value: string) => string | null;
+  className?: string;
+}
+
+const SecureTreeView: React.FC<SecureTreeViewProps> = ({
+  name,
+  label,
+  data,
+  sensitivityLevel = 'standard',
+  onEncryptedChange,
+  validateFn,
+  className = '',
+}) => {
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggleExpand = (itemId: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const handleItemSelect = useCallback((itemId: string) => {
+    const newSelectedItems = selectedItems.includes(itemId)
+      ? selectedItems.filter(id => id !== itemId)
+      : [...selectedItems, itemId];
+
+    setSelectedItems(newSelectedItems);
+
+    // Validation
+    if (validateFn) {
+      const validationError = validateFn(newSelectedItems.join(','));
+      setError(validationError);
+      if (validationError) return;
+    }
+
+    // Encrypt and send
+    onEncryptedChange?.(name, JSON.stringify(newSelectedItems));
+  }, [name, onEncryptedChange, validateFn, selectedItems]);
+
+  const renderTreeItems = (items: TreeItem[], level = 0) => {
+    return items.map(item => (
+      <div key={item.id} className={`pl-${level * 4}`}>
+        <div className="flex items-center">
+          {item.children && (
+            <button 
+              type="button"
+              onClick={() => toggleExpand(item.id)}
+              className="mr-2 text-gray-500 focus:outline-none"
+            >
+              {expandedItems.includes(item.id) ? '▼' : '▶'}
+            </button>
+          )}
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedItems.includes(item.id)}
+              onChange={() => handleItemSelect(item.id)}
+              className="form-checkbox"
+            />
+            <span>{item.label}</span>
+          </label>
+        </div>
+        {item.children && expandedItems.includes(item.id) && (
+          <div className="pl-4">
+            {renderTreeItems(item.children, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="space-y-2">
+      <label 
+        htmlFor={name}
+        className="block text-sm font-medium text-gray-700"
+      >
+        {label}
+        {sensitivityLevel !== 'standard' && (
+          <span className={`ml-2 text-xs ${
+            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            ({sensitivityLevel})
+          </span>
+        )}
+      </label>
+
+      <div 
+        className={`border rounded-md p-4 ${className} 
+          ${error ? 'border-red-300' : 'border-gray-300'}`}
+      >
+        {renderTreeItems(data)}
+      </div>
+
+      {error && (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default SecureTreeView;

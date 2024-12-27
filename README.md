@@ -1,109 +1,174 @@
-# HippaGuard
+# HIPPAGuard 🔒
 
-🔒 Secure form handling with client-side encryption for React applications
+Secure form handling with client-side encryption for React applications - HIPAA-compliant form components with built-in security.
 
 [![npm version](https://badge.fury.io/js/@hippaguard%2Freact.svg)](https://badge.fury.io/js/@hippaguard%2Freact)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Test Coverage](https://img.shields.io/badge/coverage-89%25-green.svg)](https://hippaguard.dev/coverage)
+[![Test Coverage](https://img.shields.io/badge/coverage-87%25-green.svg)](https://github.com/Anas-debug/HIPPAGuard)
 
-## Features
+![HIPPAGuard Logo](assets/logo.svg)
 
-- 🔐 Client-side encryption for sensitive data
-- 🏥 HIPAA-compliant form handling
-- 🛡️ Built-in validation
-- 🔄 React hooks for easy integration
-- 📝 TypeScript support
-- ✅ Comprehensive test coverage (89.34%)
-- 🚀 Zero dependencies (except React)
-- 🔍 Automatic data sanitization
+## Overview
 
-## Installation
+HIPPAGuard provides secure form components for handling sensitive healthcare data in React applications. It includes built-in encryption, data protection, and HIPAA compliance features.
 
-```bash
+## Key Features
+
+- 🔒 Client-side AES-256-GCM encryption
+- ⚕ HIPAA & PHI/PII data protection 
+- 🛡 Form validation & sanitization
+- 🔄 Simple React hooks API
+- 📝 Full TypeScript support
+- ✅ Extensive test coverage
+- 🚀 Lightweight with minimal dependencies
+- 💪 Built for production use
+
+## Getting Started
+
+### Installation
+
+bash
 npm install @hippaguard/react
-# or
-yarn add @hippaguard/react
-```
 
-## Quick Start
 
-```tsx
+### Basic Usage
+
+tsx
 import { SecureForm, SecureField } from '@hippaguard/react';
 
-function MyForm() {
+function PatientForm() {
   const handleSubmit = async (data) => {
     // Data is automatically encrypted
-    console.log(data);
+    console.log('Encrypted form data:', data);
   };
 
   return (
     <SecureForm onSubmit={handleSubmit}>
       <SecureField
-        name="patientName"
-        label="Patient Name"
+        name="firstName" 
+        label="First Name"
+        required
         sensitivityLevel="PHI"
-        required
       />
-      <SecureField
-        name="ssn"
-        label="Social Security Number"
-        sensitivityLevel="PII"
-        type="password"
-        required
+      
+      <SecureTextArea
+        name="symptoms"
+        label="Current Symptoms" 
+        sensitivityLevel="PHI"
       />
-      <button type="submit">Submit</button>
+
+      <SecureSelect
+        name="insurance"
+        label="Insurance Provider"
+        options={insuranceOptions}
+        sensitivityLevel="PHI"
+      />
+
+      <button type="submit">
+        Submit
+      </button>
     </SecureForm>
   );
 }
-```
+
+
+## Core Components
+
+### SecureField
+Standard input field with encryption and validation.
+
+tsx
+<SecureField
+  name="ssn"
+  label="Social Security Number" 
+  type="text"
+  sensitivityLevel="PII"
+  validateFn={validateSSN}
+  required
+/>
+
+
+### SecureSelect 
+Encrypted select/dropdown component.
+
+tsx
+<SecureSelect
+  name="provider"
+  label="Insurance Provider"
+  options={[
+    { value: 'aetna', label: 'Aetna' },
+    { value: 'cigna', label: 'Cigna' }
+  ]}
+  sensitivityLevel="PHI"
+/>
+
+
+### SecureTextArea
+Multiline text input with encryption.
+
+tsx
+<SecureTextArea
+  name="notes"
+  label="Medical Notes"
+  rows={4}
+  sensitivityLevel="PHI" 
+/>
+
+
+### SecureCheckbox
+Secure checkbox component.
+
+tsx
+<SecureCheckbox
+  name="consent"
+  label="I consent to treatment"
+  sensitivityLevel="PHI"
+/>
+
+
+### SecureRadioGroup
+Radio button group with encryption.
+
+tsx
+<SecureRadioGroup
+  name="gender"
+  label="Gender"
+  options={['Male', 'Female', 'Other']}
+  sensitivityLevel="PHI"
+/>
+
 
 ## Security Features
 
-### Encryption
-- AES-256-GCM encryption for all sensitive data
-- Unique IV (Initialization Vector) for each encryption operation
-- Key derivation using PBKDF2
-- Automatic key destruction on component unmount
+- 🔐 AES-256-GCM encryption
+- 🔑 Unique IV per encryption
+- 🛡 PBKDF2 key derivation
+- 🧹 Auto key cleanup
+- 🔒 Zero plaintext storage
+- ✅ Input sanitization 
 
-### Data Protection
-- Zero storage of sensitive data in plain text
-- Support for PHI (Protected Health Information)
-- Support for PII (Personally Identifiable Information)
-- HIPAA compliance ready
-- Automatic form field validation
+## Validation
 
-### Best Practices
-- Secure data handling
-- Input validation and sanitization
-- Automatic cleanup of sensitive data
-- No data persistence without explicit configuration
+Built-in validation helpers:
 
-## Component API
+tsx
+import { validators } from '@hippaguard/react';
 
-### SecureField
-```tsx
-interface SecureFieldProps {
-  name: string;              // Field identifier
-  label: string;             // Field label
-  sensitivityLevel?: 'PHI' | 'PII' | 'HIPAA' | 'NONE';  // Data sensitivity
-  onChange?: (value: string) => void;  // Change handler
-  validateFn?: (value: string) => string | null;  // Custom validation
-  required?: boolean;        // Required field flag
-  type?: 'text' | 'password' | 'email';  // Input type
-}
-```
+<SecureField
+  name="email"
+  validateFn={validators.combine([
+    validators.required(),
+    validators.email()
+  ])}
+/>
 
-### SecureForm
-```tsx
-interface SecureFormProps {
-  children: React.ReactNode;  // Form children
-  onSubmit: (data: Record<string, any>) => void | Promise<void>;  // Submit handler
-  className?: string;        // Optional CSS class
-}
-```
 
-### Security Provider
-```tsx
+## Context & Hooks
+
+### SecurityProvider
+Provides encryption context.
+
+tsx
 import { SecurityProvider } from '@hippaguard/react';
 
 function App() {
@@ -113,149 +178,49 @@ function App() {
     </SecurityProvider>
   );
 }
-```
 
-## Validation Utilities
-
-Built-in validators for common use cases:
-
-```tsx
-import { commonValidators, createValidator } from '@hippaguard/react';
-
-// Single validator
-const nameField = (
-  <SecureField
-    name="name"
-    validateFn={commonValidators.required()}
-  />
-);
-
-// Combined validators
-const passwordField = (
-  <SecureField
-    name="password"
-    validateFn={createValidator([
-      commonValidators.required(),
-      commonValidators.minLength(8),
-      commonValidators.pattern(
-        /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
-        'Password must contain letters and numbers'
-      )
-    ])}
-  />
-);
-```
-
-## Context Hooks
-
-### useForm
-```tsx
-const { state, updateField, resetForm } = useForm();
-```
 
 ### useSecurity
-```tsx
-const { 
-  securityCore,
-  initialize,
-  encrypt,
-  decrypt,
-  isInitialized 
-} = useSecurity();
-```
+Access encryption functions.
 
-## Advanced Usage
+tsx
+const { encrypt, decrypt } = useSecurity();
 
-### Custom Encryption Configuration
-```tsx
-import { SecurityCore } from '@hippaguard/react';
-
-const customConfig = {
-  encryptionAlgorithm: 'AES-256-GCM',
-  ivLength: 12,
-  saltLength: 16,
-  iterations: 100000
-};
-
-const securityCore = new SecurityCore(customConfig);
-```
-
-### Form with Multiple Sensitivity Levels
-```tsx
-<SecureForm onSubmit={handleSubmit}>
-  <SecureField
-    name="publicInfo"
-    label="Public Information"
-    sensitivityLevel="NONE"
-  />
-  <SecureField
-    name="ssn"
-    label="SSN"
-    sensitivityLevel="PII"
-    type="password"
-  />
-  <SecureField
-    name="diagnosis"
-    label="Diagnosis"
-    sensitivityLevel="PHI"
-  />
-</SecureForm>
-```
-
-## Performance Considerations
-
-- Zero-dependency core (except React)
-- Lazy initialization of cryptographic operations
-- Automatic cleanup of sensitive data
-- Optimized re-renders
-- Efficient form state management
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please check our [Contributing Guide](CONTRIBUTING.md).
 
 ### Development
 
-1. Clone the repository
-```bash
-git clone https://github.com/anassaoui/hippaguard.git
-```
+1. Clone repo
+bash
+git clone https://github.com/Anas-debug/HIPPAGuard.git
+
 
 2. Install dependencies
-```bash
+bash
 npm install
-```
+
 
 3. Run tests
-```bash
+bash
 npm test
-```
 
-4. Build
-```bash
-npm run build
-```
 
-## Testing
-
-Current test coverage: 89.34%
-
-- Unit tests for all components
-- Integration tests for form workflows
-- Security testing for encryption functions
-- Validation testing
-- Edge case coverage
-
-## Author
-
-Created and maintained by [Anas Saoui](https://github.com/anassaoui).
-
-## License
-
-MIT © Anas Saoui
+### Testing
+Coverage: ~87%
+- Unit tests
+- Integration tests  
+- Security tests
+- Edge cases
 
 ## Support
 
-For bugs and feature requests, please [open an issue](https://github.com/anassaoui/hippaguard/issues).
+- 📝 [Documentation](https://github.com/Anas-debug/HIPPAGuard)
+- 🐛 [Issues](https://github.com/Anas-debug/HIPPAGuard/issues)
+- ✉ [Email](mailto:security@hippaguard.dev)
 
-For security concerns, please email security@hippaguard.dev directly.
+## License
+
+[MIT](LICENSE) © [Anas Saoui](https://github.com/Anas-debug)

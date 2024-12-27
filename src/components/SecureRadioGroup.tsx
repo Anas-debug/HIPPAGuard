@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { SecurityCore } from '../core/security-core';
+import { useSecurity } from '../contexts/SecurityContext';
 
 interface RadioOption {
   value: string;
@@ -17,7 +17,7 @@ interface SecureRadioGroupProps {
   className?: string;
 }
 
-const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
+export const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
   name,
   label,
   options,
@@ -27,28 +27,27 @@ const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
   validateFn,
   className = ''
 }) => {
+  const { encrypt, decrypt, isInitialized } = useSecurity();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const securityCore = new SecurityCore();
-
   useEffect(() => {
     const decryptInitialValue = async () => {
-      if (initialEncryptedValue) {
+      if (initialEncryptedValue && isInitialized) {
         try {
-          await securityCore.initialize('temp-key');
-          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          const decrypted = await decrypt(initialEncryptedValue);
           setValue(typeof decrypted === 'string' ? decrypted : '');
         } catch (err) {
           setError('Failed to decrypt initial value');
+          console.error('Decryption error:', err);
         }
       }
       setIsLoading(false);
     };
 
     decryptInitialValue();
-  }, [initialEncryptedValue]);
+  }, [initialEncryptedValue, decrypt, isInitialized]);
 
   const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -61,13 +60,15 @@ const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
     }
 
     try {
-      await securityCore.initialize('temp-key');
-      const encryptedValue = await securityCore.encrypt(newValue);
-      onEncryptedChange?.(name, encryptedValue);
+      if (isInitialized && onEncryptedChange) {
+        const encryptedValue = await encrypt(newValue);
+        onEncryptedChange(name, encryptedValue);
+      }
     } catch (err) {
       setError('Failed to encrypt value');
+      console.error('Encryption error:', err);
     }
-  }, [name, onEncryptedChange, validateFn]);
+  }, [name, onEncryptedChange, validateFn, encrypt, isInitialized]);
 
   if (isLoading) {
     return <div className="animate-pulse h-20 bg-gray-100 rounded" />;
@@ -75,39 +76,51 @@ const SecureRadioGroup: React.FC<SecureRadioGroupProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="block text-sm font-medium text-gray-700">
+      <label className="block text-sm font-medium text-gray-900">
         {label}
         {sensitivityLevel !== 'standard' && (
-          <span className={`ml-2 text-xs ${
-            sensitivityLevel === 'PHI' ? 'text-red-500' : 'text-yellow-500'
+          <span className={`ml-2 text-xs px-2 py-1 rounded-full inline-block ${
+            sensitivityLevel === 'PHI' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
           }`}>
-            ({sensitivityLevel})
+            {sensitivityLevel}
           </span>
         )}
       </label>
 
-      <div className="space-y-2">
+      <div className="bg-white rounded-md -space-y-px">
         {options.map((option, index) => {
           const optionValue = typeof option === 'string' ? option : option.value;
           const optionLabel = typeof option === 'string' ? option : option.label;
           const optionId = `${name}-${optionValue}`;
 
           return (
-            <div key={optionId} className="flex items-center">
-              <input
-                type="radio"
-                id={optionId}
-                name={name}
-                value={optionValue}
-                checked={value === optionValue}
-                onChange={handleChange}
-                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+            <div 
+              key={optionId} 
+              className={`relative flex p-4 cursor-pointer focus:outline-none
+                ${index === 0 ? 'rounded-tl-md rounded-tr-md' : ''} 
+                ${index === options.length - 1 ? 'rounded-bl-md rounded-br-md' : ''}
+                ${value === optionValue ? 'bg-blue-50 border-blue-200 z-10' : 'border-gray-200'}
+                ${index !== 0 ? '-mt-px' : ''}
+                border hover:bg-gray-50`}
+            >
+              <div className="flex items-center h-5">
+                <input
+                  type="radio"
+                  id={optionId}
+                  name={name}
+                  value={optionValue}
+                  checked={value === optionValue}
+                  onChange={handleChange}
+                  className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
               <label
                 htmlFor={optionId}
-                className="ml-3 block text-sm font-medium text-gray-700"
+                className="ml-3 flex flex-col cursor-pointer"
               >
-                {optionLabel}
+                <span className="block text-sm font-medium text-gray-900">
+                  {optionLabel}
+                </span>
               </label>
             </div>
           );
