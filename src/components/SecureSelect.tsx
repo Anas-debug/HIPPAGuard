@@ -1,9 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { SecurityCore } from '../core/security-core';
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
 interface SecureSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
   name: string;
   label: string;
-  options: string[];
+  options: Array<string | SelectOption>;
   sensitivityLevel?: 'PHI' | 'PII' | 'standard';
   initialEncryptedValue?: string;
   onEncryptedChange?: (name: string, encryptedValue: string) => void;
@@ -15,30 +21,74 @@ export const SecureSelect: React.FC<SecureSelectProps> = ({
   label,
   options,
   sensitivityLevel = 'standard',
-  // initialEncryptedValue,
-  // onEncryptedChange,
+  initialEncryptedValue,
+  onEncryptedChange,
   validateFn,
   className = '',
   ...props
 }) => {
-  // State for select value and validation
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Handle value changes
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+  const securityCore = new SecurityCore();
+
+  useEffect(() => {
+    const decryptInitialValue = async () => {
+      if (initialEncryptedValue) {
+        try {
+          await securityCore.initialize('temp-key');
+          const decrypted = await securityCore.decrypt(initialEncryptedValue);
+          setValue(typeof decrypted === 'string' ? decrypted : '');
+        } catch (err) {
+          setError('Failed to decrypt initial value');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    decryptInitialValue();
+  }, [initialEncryptedValue]);
+
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
 
-    // Validate if validation function provided
     if (validateFn) {
       const validationError = validateFn(newValue);
       setError(validationError);
       if (validationError) return;
     }
 
-    // Encryption and decryption logic would go here
-  }, [name, validateFn]);
+    try {
+      await securityCore.initialize('temp-key');
+      const encryptedValue = await securityCore.encrypt(newValue);
+      onEncryptedChange?.(name, encryptedValue);
+    } catch (err) {
+      setError('Failed to encrypt value');
+    }
+  }, [name, onEncryptedChange, validateFn]);
+
+  const renderOptions = () => {
+    return options.map((option, index) => {
+      if (typeof option === 'string') {
+        return (
+          <option key={index} value={option}>
+            {option}
+          </option>
+        );
+      }
+      return (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      );
+    });
+  };
+
+  if (isLoading) {
+    return <div className="animate-pulse h-10 bg-gray-100 rounded" />;
+  }
 
   return (
     <div className="space-y-2">
@@ -68,11 +118,7 @@ export const SecureSelect: React.FC<SecureSelectProps> = ({
         {...props}
       >
         <option value="">Select an option</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {renderOptions()}
       </select>
 
       {error && (
