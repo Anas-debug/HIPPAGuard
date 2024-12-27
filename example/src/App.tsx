@@ -38,10 +38,10 @@ const ComponentShowcase = () => {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-            HIPPAGuard Component Showcase
+            Medicare Benefits Component Showcase
           </h1>
           <p className="text-gray-600 max-w-2xl text-center">
-            Secure form handling with client-side encryption for healthcare applications
+            Secure form handling with client-side encryption for Medicare enrollment and benefits
           </p>
         </div>
 
@@ -50,27 +50,27 @@ const ComponentShowcase = () => {
           {/* Text Inputs */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b pb-4">
-              Text Input Components
+              Personal Information
             </h2>
             <div className="space-y-6">
               <SecureField
-                name="standardField"
-                label="Standard Field"
-                placeholder="Enter text..."
+                name="medicareNumber"
+                label="Medicare Number"
+                placeholder="Enter Medicare Number"
                 onEncryptedChange={handleEncryptedChange}
               />
               <SecureField
-                name="piiField"
+                name="socialSecurity"
                 label="Social Security Number"
                 sensitivityLevel="PII"
                 placeholder="XXX-XX-XXXX"
                 onEncryptedChange={handleEncryptedChange}
               />
               <SecureField
-                name="phiField"
-                label="Medical ID"
+                name="medicareCardHolderName"
+                label="Medicare Card Holder Name"
                 sensitivityLevel="PHI"
-                placeholder="Enter medical ID"
+                placeholder="Full Name as on Medicare Card"
                 onEncryptedChange={handleEncryptedChange}
               />
             </div>
@@ -79,28 +79,29 @@ const ComponentShowcase = () => {
           {/* Selection Components */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b pb-4">
-              Selection Components
+              Medicare Plan Details
             </h2>
             <SecureSelect
-              name="provider"
-              label="Insurance Provider"
+              name="medicareType"
+              label="Medicare Plan Type"
               sensitivityLevel="PHI"
               options={[
-                { value: '', label: 'Select a provider' },
-                { value: 'aetna', label: 'Aetna' },
-                { value: 'bluecross', label: 'Blue Cross Blue Shield' },
-                { value: 'cigna', label: 'Cigna' },
+                { value: '', label: 'Select Medicare Plan' },
+                { value: 'partA', label: 'Medicare Part A (Hospital)' },
+                { value: 'partB', label: 'Medicare Part B (Medical)' },
+                { value: 'partC', label: 'Medicare Part C (Medicare Advantage)' },
+                { value: 'partD', label: 'Medicare Part D (Prescription Drug)' },
               ]}
               onEncryptedChange={handleEncryptedChange}
             />
             <SecureRadioGroup
-              name="visitType"
-              label="Visit Type"
+              name="enrollmentStatus"
+              label="Enrollment Status"
               sensitivityLevel="PHI"
               options={[
-                { value: 'new', label: 'New Patient' },
-                { value: 'followup', label: 'Follow-up' },
-                { value: 'urgent', label: 'Urgent Care' },
+                { value: 'initial', label: 'Initial Enrollment' },
+                { value: 'special', label: 'Special Enrollment Period' },
+                { value: 'annual', label: 'Annual Enrollment' },
               ]}
               onEncryptedChange={handleEncryptedChange}
             />
@@ -109,13 +110,13 @@ const ComponentShowcase = () => {
           {/* Text Area */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b pb-4">
-              Text Area Component
+              Additional Medical Information
             </h2>
             <SecureTextArea
-              name="medicalNotes"
-              label="Medical Notes"
+              name="medicalHistory"
+              label="Relevant Medical History"
               sensitivityLevel="PHI"
-              placeholder="Enter detailed medical notes..."
+              placeholder="Provide relevant medical history for Medicare enrollment..."
               rows={6}
               onEncryptedChange={handleEncryptedChange}
             />
@@ -124,17 +125,17 @@ const ComponentShowcase = () => {
           {/* Checkboxes */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b pb-4">
-              Consent Forms
+              Consent and Authorization
             </h2>
             <div className="space-y-4">
               <SecureCheckbox
-                name="hipaaConsent"
-                label="I acknowledge the HIPAA Privacy Notice"
+                name="privacyConsent"
+                label="I acknowledge the Medicare Privacy Notice"
                 onEncryptedChange={handleEncryptedChange}
               />
               <SecureCheckbox
-                name="treatmentConsent"
-                label="I consent to treatment"
+                name="dataSharing"
+                label="I consent to share medical information for enrollment"
                 sensitivityLevel="PHI"
                 onEncryptedChange={handleEncryptedChange}
               />
@@ -146,7 +147,7 @@ const ComponentShowcase = () => {
         <div className="mt-8 max-w-6xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 border-b pb-4 mb-4">
-              Encrypted Form Data
+              Encrypted Medicare Enrollment Data
             </h2>
             <pre className="bg-slate-50 p-4 rounded-lg overflow-auto max-h-72 text-sm">
               {JSON.stringify(formData, null, 2)}
