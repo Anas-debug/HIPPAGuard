@@ -1,16 +1,15 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '../test-utils';
 import userEvent from '@testing-library/user-event';
 import { SecureForm } from '../../components/SecureForm';
 import { SecureField } from '../../components/SecureField';
-import { act } from 'react-dom/test-utils';
 
 describe('SecureForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders form and children', () => {
+  it('renders form and children', async () => {
     render(
       <SecureForm onSubmit={() => {}}>
         <SecureField
@@ -21,14 +20,13 @@ describe('SecureForm', () => {
       </SecureForm>
     );
 
-    // Look for specific elements instead of roles
     expect(screen.getByLabelText('Test Field')).toBeInTheDocument();
     expect(screen.getByText('Submit')).toBeInTheDocument();
   });
 
   it('handles form submission', async () => {
     const handleSubmit = jest.fn();
-    const user = userEvent.setup({ delay: null }); // Disable delay
+    const user = userEvent.setup();
 
     render(
       <SecureForm onSubmit={handleSubmit}>
@@ -40,19 +38,18 @@ describe('SecureForm', () => {
       </SecureForm>
     );
 
-    await act(async () => {
-      const input = screen.getByLabelText('Test Field');
-      await user.type(input, 'test value');
-      await user.click(screen.getByText('Submit'));
-    });
+    await user.type(screen.getByLabelText('Test Field'), 'test value');
+    await user.click(screen.getByText('Submit'));
 
-    expect(handleSubmit).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(handleSubmit).toHaveBeenCalled();
+    });
   });
 
   it('handles validation before submission', async () => {
     const handleSubmit = jest.fn();
     const validateFn = jest.fn(value => value.length < 3 ? 'Too short' : null);
-    const user = userEvent.setup({ delay: null }); // Disable delay
+    const user = userEvent.setup();
 
     render(
       <SecureForm onSubmit={handleSubmit}>
@@ -65,13 +62,12 @@ describe('SecureForm', () => {
       </SecureForm>
     );
 
-    await act(async () => {
-      const input = screen.getByLabelText('Test Field');
-      await user.type(input, 'ab');
-      await user.click(screen.getByText('Submit'));
-    });
+    await user.type(screen.getByLabelText('Test Field'), 'ab');
+    await user.click(screen.getByText('Submit'));
 
-    expect(screen.getByText('Too short')).toBeInTheDocument();
-    expect(handleSubmit).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Too short')).toBeInTheDocument();
+      expect(handleSubmit).not.toHaveBeenCalled();
+    });
   });
 });

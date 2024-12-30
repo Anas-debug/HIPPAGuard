@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm } from '../../contexts/FormContext';
 import { act } from 'react-dom/test-utils';
 
@@ -9,53 +8,76 @@ const TestComponent = () => {
 
   return (
     <div>
-      <input
-        type="text"
-        onChange={(e) => updateField('test', {
-          value: e.target.value,
-          isValid: e.target.value.length > 0
-        })}
-        data-testid="input"
-      />
-      <button onClick={resetForm} data-testid="reset">Reset</button>
-      <div data-testid="value">{state.fields.test?.value}</div>
+      <button 
+        onClick={() => updateField('testField', { value: 'test', isValid: true })}
+        data-testid="update-button"
+      >
+        Update Field
+      </button>
+      <button 
+        onClick={resetForm}
+        data-testid="reset-button"
+      >
+        Reset Form
+      </button>
+      <div data-testid="form-state">{JSON.stringify(state)}</div>
     </div>
   );
 };
 
 describe('FormContext', () => {
-  it('updates field values', async () => {
-    const user = userEvent.setup({ delay: null });
-
+  it('provides initial state', () => {
     render(
       <FormProvider>
         <TestComponent />
       </FormProvider>
     );
 
-    await act(async () => {
-      const input = screen.getByTestId('input');
-      await user.type(input, 'test');
+    expect(JSON.parse(screen.getByTestId('form-state').textContent || '{}')).toEqual({
+      fields: {},
+      isValid: false,
+      isSubmitting: false,
     });
-
-    expect(screen.getByTestId('value')).toHaveTextContent('test');
   });
 
-  it('resets form state', async () => {
-    const user = userEvent.setup({ delay: null });
-
+  it('updates field state', () => {
     render(
       <FormProvider>
         <TestComponent />
       </FormProvider>
     );
 
-    await act(async () => {
-      const input = screen.getByTestId('input');
-      await user.type(input, 'test');
-      await user.click(screen.getByTestId('reset'));
+    act(() => {
+      screen.getByTestId('update-button').click();
     });
 
-    expect(screen.getByTestId('value')).toBeEmptyDOMElement();
+    const state = JSON.parse(screen.getByTestId('form-state').textContent || '{}');
+    expect(state.fields.testField).toEqual({
+      value: 'test',
+      isValid: true,
+    });
+  });
+
+  it('resets form state', () => {
+    render(
+      <FormProvider>
+        <TestComponent />
+      </FormProvider>
+    );
+
+    act(() => {
+      screen.getByTestId('update-button').click();
+    });
+
+    act(() => {
+      screen.getByTestId('reset-button').click();
+    });
+
+    const state = JSON.parse(screen.getByTestId('form-state').textContent || '{}');
+    expect(state).toEqual({
+      fields: {},
+      isValid: false,
+      isSubmitting: false,
+    });
   });
 });

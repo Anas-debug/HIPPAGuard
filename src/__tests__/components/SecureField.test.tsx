@@ -1,15 +1,14 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '../test-utils';
 import userEvent from '@testing-library/user-event';
 import { SecureField } from '../../components/SecureField';
-import { act } from 'react-dom/test-utils';
 
 describe('SecureField', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders with label and input', () => {
+  it('renders with label and input', async () => {
     render(
       <SecureField
         name="testField"
@@ -22,24 +21,23 @@ describe('SecureField', () => {
     expect(screen.getByLabelText('Test Input')).toHaveAttribute('type', 'text');
   });
 
-  it('handles user input', async () => {
-    const handleChange = jest.fn();
-    const user = userEvent.setup({ delay: null }); // Disable delay
+  it('handles user input and encryption', async () => {
+    const handleEncryptedChange = jest.fn();
+    const user = userEvent.setup();
 
     render(
       <SecureField
         name="testField"
         label="Test Input"
-        onChange={handleChange}
+        onEncryptedChange={handleEncryptedChange}
       />
     );
 
-    await act(async () => {
-      const input = screen.getByLabelText('Test Input');
-      await user.type(input, 'test value');
-    });
+    await user.type(screen.getByLabelText('Test Input'), 'test value');
 
-    expect(handleChange).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(handleEncryptedChange).toHaveBeenCalledWith('testField', expect.any(String));
+    });
   });
 
   it('shows sensitivity level indicator', () => {
@@ -51,14 +49,13 @@ describe('SecureField', () => {
       />
     );
 
-    // Use getAllByText and check for presence of PHI
-    const elements = screen.getAllByText(/PHI/);
-    expect(elements.length).toBeGreaterThan(0);
+    expect(screen.getByText('PHI')).toBeInTheDocument();
+    expect(screen.getByText('PHI')).toHaveClass('bg-red-100', 'text-red-700');
   });
 
   it('validates input', async () => {
     const validateFn = jest.fn(value => value.length < 3 ? 'Too short' : null);
-    const user = userEvent.setup({ delay: null }); // Disable delay
+    const user = userEvent.setup();
 
     render(
       <SecureField
@@ -68,11 +65,10 @@ describe('SecureField', () => {
       />
     );
 
-    await act(async () => {
-      const input = screen.getByLabelText('Test Input');
-      await user.type(input, 'ab');
-    });
+    await user.type(screen.getByLabelText('Test Input'), 'ab');
 
-    expect(await screen.findByText('Too short')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Too short')).toBeInTheDocument();
+    });
   });
 });
